@@ -115,7 +115,7 @@ const Payments = () => {
           <table className="data-table">
             <thead><tr><th>세대</th><th>입주자</th><th>잔금</th><th>중도금</th><th>옵션비</th><th>확장비</th><th>기타부담금</th><th>합계</th><th>납부상태</th><th>납부확인</th></tr></thead>
             <tbody>
-              {filtered.map((p: any, i: number) => (
+              {paginate(filtered, page).map((p: any, i: number) => (
                 <tr key={i}>
                   <td>{p.unit}</td><td className="font-medium">{p.name}</td>
                   <td className="text-right">{p.balance}</td><td>{p.mid}</td>
