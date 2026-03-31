@@ -40,9 +40,12 @@ const navItems: NavItem[] = [
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
+  const { profile, signOut, roles } = useAuth();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileExpandedItem, setMobileExpandedItem] = useState<string | null>(null);
+
+  const roleLabel = roles.includes("super_admin") ? "슈퍼관리자" : roles.includes("site_manager") ? "현장관리자" : roles.includes("cs_agent") ? "CS담당자" : "관리자";
 
   const isActiveParent = (item: NavItem) => {
     if (location.pathname === item.path) return true;
