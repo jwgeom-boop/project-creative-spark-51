@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Send, FileText, Upload } from "lucide-react";
+import { toast } from "sonner";
 
 const templates = [
   "잔금 납부 안내", "동의서 서명 요청", "사전점검 일정", "하자보수 일정 안내", "이사 차량 등록", "공지 — 엘리베이터"

@@ -1,6 +1,7 @@
 import { Search, Download, Camera } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 const summaryData = [
   { label: "전체 접수", value: "142건" },
@@ -82,8 +83,8 @@ const Defects = () => {
           <button className="px-3 py-2 text-muted-foreground"><Search className="w-4 h-4" /></button>
         </div>
         <div className="ml-auto flex gap-2">
-          <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md">일괄 배정</button>
-          <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1"><Download className="w-4 h-4" /> 엑셀</button>
+          <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md" onClick={() => toast.success("미배정 건이 일괄 배정되었습니다.")}>일괄 배정</button>
+          <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => toast.success("엑셀 파일이 다운로드되었습니다.")}><Download className="w-4 h-4" /> 엑셀</button>
         </div>
       </div>
 
@@ -107,7 +108,7 @@ const Defects = () => {
                 <td><span className={`status-badge ${getDefectStatusBadge(d.status)}`}>{d.status}</span></td>
                 <td>
                   {d.status === "미배정" ? (
-                    <button className="text-primary text-sm hover:underline">배정</button>
+                    <button className="text-primary text-sm hover:underline" onClick={() => toast.success("업체가 배정되었습니다.")}>배정</button>
                   ) : d.status === "완료" ? (
                     <span className="text-success text-sm">완료✓</span>
                   ) : "—"}

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Search, Download } from "lucide-react";
+import { toast } from "sonner";
 import UnitDetailDialog from "@/components/UnitDetailDialog";
+import { useSearchParams } from "react-router-dom";
 
 const unitData = [
   { dong: "101동", ho: "0101호", area: "84㎡", name: "홍길동", phone: "010-1234-5678", status: "입주완료", payment: "납부완료", permit: "발급완료", moving: "완료" },
@@ -19,11 +21,25 @@ const getStatusBadge = (value: string) => {
 const Units = () => {
   const [selectedUnit, setSelectedUnit] = useState<typeof unitData[0] | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [dongFilter, setDongFilter] = useState("전체");
+  const [statusFilter, setStatusFilter] = useState("전체");
 
   const handleRowClick = (unit: typeof unitData[0]) => {
     setSelectedUnit(unit);
     setDialogOpen(true);
   };
+
+  const handleExcelDownload = () => {
+    toast.success("엑셀 파일이 다운로드되었습니다.");
+  };
+
+  const filtered = unitData.filter(u => {
+    if (dongFilter !== "전체" && u.dong !== dongFilter) return false;
+    if (statusFilter !== "전체" && u.status !== statusFilter) return false;
+    if (search && !u.name.includes(search) && !u.dong.includes(search) && !u.ho.includes(search)) return false;
+    return true;
+  });
 
   return (
     <div>
@@ -33,19 +49,19 @@ const Units = () => {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <select className="px-3 py-2 border border-border rounded-md text-sm bg-card">
-          <option>동 선택: 전체</option>
-          <option>101동</option><option>102동</option><option>103동</option>
+        <select className="px-3 py-2 border border-border rounded-md text-sm bg-card" value={dongFilter} onChange={(e) => setDongFilter(e.target.value)}>
+          <option value="전체">동 선택: 전체</option>
+          <option value="101동">101동</option><option value="102동">102동</option><option value="103동">103동</option>
         </select>
-        <select className="px-3 py-2 border border-border rounded-md text-sm bg-card">
-          <option>입주상태: 전체</option>
-          <option>입주완료</option><option>입주예정</option><option>미입주</option>
+        <select className="px-3 py-2 border border-border rounded-md text-sm bg-card" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <option value="전체">입주상태: 전체</option>
+          <option value="입주완료">입주완료</option><option value="입주예정">입주예정</option><option value="미입주">미입주</option>
         </select>
         <div className="flex items-center border border-border rounded-md bg-card">
-          <input type="text" placeholder="세대·이름 검색" className="px-3 py-2 text-sm bg-transparent outline-none" />
+          <input type="text" placeholder="세대·이름 검색" value={search} onChange={(e) => setSearch(e.target.value)} className="px-3 py-2 text-sm bg-transparent outline-none" />
           <button className="px-3 py-2 text-muted-foreground"><Search className="w-4 h-4" /></button>
         </div>
-        <button className="ml-auto px-4 py-2 text-sm border border-border rounded-md bg-card hover:bg-accent flex items-center gap-1">
+        <button className="ml-auto px-4 py-2 text-sm border border-border rounded-md bg-card hover:bg-accent flex items-center gap-1" onClick={handleExcelDownload}>
           <Download className="w-4 h-4" /> 엑셀 다운로드
         </button>
       </div>
@@ -60,7 +76,7 @@ const Units = () => {
             </tr>
           </thead>
           <tbody>
-            {unitData.map((u, i) => (
+            {filtered.map((u, i) => (
               <tr key={i} className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => handleRowClick(u)}>
                 <td onClick={(e) => e.stopPropagation()}><input type="checkbox" className="rounded" /></td>
                 <td>{u.dong}</td><td>{u.ho}</td><td>{u.area}</td>
@@ -71,10 +87,11 @@ const Units = () => {
                 <td><span className={`status-badge ${getStatusBadge(u.moving)}`}>{u.moving}</span></td>
               </tr>
             ))}
+            {filtered.length === 0 && <tr><td colSpan={10} className="text-center py-6 text-muted-foreground">검색 결과가 없습니다.</td></tr>}
           </tbody>
         </table>
         <div className="px-4 py-3 text-sm text-muted-foreground border-t border-border">
-          총 300세대 중 5건 표시 | 1 / 60 페이지
+          총 300세대 중 {filtered.length}건 표시 | 1 / 60 페이지
         </div>
       </div>
 

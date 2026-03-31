@@ -1,6 +1,7 @@
 import { Search, Download, Send, ArrowRight } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 const summary = [
   { label: "전체 세대", value: "300세대" },

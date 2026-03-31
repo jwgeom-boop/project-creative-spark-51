@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { Search, Download, QrCode } from "lucide-react";
+import { toast } from "sonner";
 
 const summary = [
   { label: "등록 차량", value: "312대" },
@@ -18,6 +20,14 @@ const vehicleData = [
 ];
 
 const Vehicles = () => {
+  const [search, setSearch] = useState("");
+  const [activeTab, setActiveTab] = useState(0);
+
+  const filtered = vehicleData.filter(v => {
+    if (!search) return true;
+    return v.name.includes(search) || v.unit.includes(search) || v.plate.includes(search);
+  });
+
   return (
     <div>
       <div className="page-header">
@@ -37,10 +47,22 @@ const Vehicles = () => {
       {/* Tabs */}
       <div className="flex gap-1 mb-4">
         {["입주자 차량", "이삿짐 차량 (임시 QR)", "출입 이력"].map((tab, i) => (
-          <button key={tab} className={`px-4 py-2 text-sm rounded-t-md border border-b-0 ${i === 0 ? "bg-card font-semibold border-border" : "bg-muted text-muted-foreground border-transparent"}`}>
+          <button key={tab} onClick={() => setActiveTab(i)} className={`px-4 py-2 text-sm rounded-t-md border border-b-0 ${activeTab === i ? "bg-card font-semibold border-border" : "bg-muted text-muted-foreground border-transparent"}`}>
             {tab}
           </button>
         ))}
+      </div>
+
+      {/* Search */}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="flex items-center border border-border rounded-md bg-card">
+          <input type="text" placeholder="세대·이름·차량번호 검색" value={search} onChange={(e) => setSearch(e.target.value)} className="px-3 py-2 text-sm bg-transparent outline-none" />
+          <button className="px-3 py-2 text-muted-foreground"><Search className="w-4 h-4" /></button>
+        </div>
+        <div className="ml-auto flex gap-2">
+          <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md flex items-center gap-1" onClick={() => toast.success("QR 일괄발급이 완료되었습니다.")}><QrCode className="w-4 h-4" /> QR 일괄발급</button>
+          <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => toast.success("엑셀 파일이 다운로드되었습니다.")}><Download className="w-4 h-4" /> 엑셀 다운로드</button>
+        </div>
       </div>
 
       <div className="bg-card rounded-lg border border-border overflow-x-auto">
@@ -49,7 +71,7 @@ const Vehicles = () => {
             <tr><th>세대</th><th>입주자명</th><th>차량번호</th><th>차종</th><th>QR발급일</th><th>QR상태</th><th>유효기간</th><th>최근입차</th><th>출입횟수</th><th>QR 관리</th></tr>
           </thead>
           <tbody>
-            {vehicleData.map((v, i) => (
+            {filtered.map((v, i) => (
               <tr key={i}>
                 <td>{v.unit}</td>
                 <td className="font-medium">{v.name}</td>
@@ -61,12 +83,13 @@ const Vehicles = () => {
                 <td>{v.lastEntry}</td>
                 <td>{v.count}</td>
                 <td>
-                  <button className="text-primary text-sm hover:underline">
+                  <button className="text-primary text-sm hover:underline" onClick={() => toast.success(`${v.name} 세대 QR이 ${v.qrStatus === "미발급" ? "발급" : "재발급"}되었습니다.`)}>
                     {v.qrStatus === "미발급" ? "발급" : "재발급"}
                   </button>
                 </td>
               </tr>
             ))}
+            {filtered.length === 0 && <tr><td colSpan={10} className="text-center py-6 text-muted-foreground">검색 결과가 없습니다.</td></tr>}
           </tbody>
         </table>
       </div>

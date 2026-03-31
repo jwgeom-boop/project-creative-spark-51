@@ -1,15 +1,39 @@
+import { useState } from "react";
 import { Save } from "lucide-react";
+import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-const slotData = [
-  { time: "09:00~10:00", max: "30세대", current: "28세대", status: "운영중" },
-  { time: "10:00~11:00", max: "30세대", current: "25세대", status: "운영중" },
-  { time: "11:00~12:00", max: "30세대", current: "30세대", status: "운영중" },
-  { time: "13:00~14:00", max: "30세대", current: "22세대", status: "운영중" },
-  { time: "14:00~15:00", max: "30세대", current: "18세대", status: "운영중" },
-  { time: "15:00~16:00", max: "20세대", current: "0세대", status: "마감" },
+const initialSlotData = [
+  { time: "09:00~10:00", max: 30, current: 28, status: "운영중" },
+  { time: "10:00~11:00", max: 30, current: 25, status: "운영중" },
+  { time: "11:00~12:00", max: 30, current: 30, status: "운영중" },
+  { time: "13:00~14:00", max: 30, current: 22, status: "운영중" },
+  { time: "14:00~15:00", max: 30, current: 18, status: "운영중" },
+  { time: "15:00~16:00", max: 20, current: 0, status: "마감" },
 ];
 
 const SiteSettings = () => {
+  const [slotData, setSlotData] = useState(initialSlotData);
+  const [editSlot, setEditSlot] = useState<number | null>(null);
+  const [editMax, setEditMax] = useState(30);
+
+  const handleSave = () => {
+    toast.success("설정이 저장되었습니다.");
+  };
+
+  const handleSlotEdit = (index: number) => {
+    setEditSlot(index);
+    setEditMax(slotData[index].max);
+  };
+
+  const handleSlotSave = () => {
+    if (editSlot !== null) {
+      setSlotData(prev => prev.map((s, i) => i === editSlot ? { ...s, max: editMax } : s));
+      toast.success("슬롯이 수정되었습니다.");
+      setEditSlot(null);
+    }
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -35,6 +59,7 @@ const SiteSettings = () => {
               </div>
             ))}
           </div>
+          <button className="mt-4 px-6 py-2 text-sm bg-primary text-primary-foreground rounded-md flex items-center gap-1" onClick={handleSave}><Save className="w-4 h-4" /> 저 장</button>
         </div>
 
         {/* Slot Settings */}
@@ -48,10 +73,10 @@ const SiteSettings = () => {
               {slotData.map((s, i) => (
                 <tr key={i}>
                   <td>{s.time}</td>
-                  <td>{s.max}</td>
-                  <td>{s.current}</td>
+                  <td>{s.max}세대</td>
+                  <td>{s.current}세대</td>
                   <td><span className={`status-badge ${s.status === "운영중" ? "status-complete" : "status-error"}`}>{s.status}</span></td>
-                  <td><button className="text-primary text-sm hover:underline">수정</button></td>
+                  <td><button className="text-primary text-sm hover:underline" onClick={() => handleSlotEdit(i)}>수정</button></td>
                 </tr>
               ))}
             </tbody>
@@ -62,14 +87,13 @@ const SiteSettings = () => {
         <div className="bg-card rounded-lg border border-border p-5">
           <h2 className="text-sm font-semibold mb-4">알림 설정</h2>
           <div className="space-y-2">
-            {[
-              "잔금 D-7·D-3·D-day", "연체 즉시 알림", "이사 미예약 D-14·D-7", "하자 접수 즉시"
-            ].map(item => (
+            {["잔금 D-7·D-3·D-day", "연체 즉시 알림", "이사 미예약 D-14·D-7", "하자 접수 즉시"].map(item => (
               <label key={item} className="flex items-center gap-2 text-sm">
                 <input type="checkbox" defaultChecked className="rounded" /> {item}
               </label>
             ))}
           </div>
+          <button className="mt-4 px-6 py-2 text-sm bg-primary text-primary-foreground rounded-md flex items-center gap-1" onClick={handleSave}><Save className="w-4 h-4" /> 저 장</button>
         </div>
 
         {/* Operating Period */}
@@ -78,20 +102,48 @@ const SiteSettings = () => {
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <label className="text-sm font-medium w-24 shrink-0 text-muted-foreground">운영시간</label>
-              <span className="text-sm">09:00 ~ 17:00</span>
+              <div className="flex items-center gap-2">
+                <input type="time" defaultValue="09:00" className="px-2 py-1.5 border border-border rounded-md text-sm bg-background" />
+                <span>~</span>
+                <input type="time" defaultValue="17:00" className="px-2 py-1.5 border border-border rounded-md text-sm bg-background" />
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <label className="text-sm font-medium w-24 shrink-0 text-muted-foreground">사전점검</label>
-              <span className="text-sm">2026.04.01 ~ 2026.04.30</span>
+              <div className="flex items-center gap-2">
+                <input type="date" defaultValue="2026-04-01" className="px-2 py-1.5 border border-border rounded-md text-sm bg-background" />
+                <span>~</span>
+                <input type="date" defaultValue="2026-04-30" className="px-2 py-1.5 border border-border rounded-md text-sm bg-background" />
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <label className="text-sm font-medium w-24 shrink-0 text-muted-foreground">이사기간</label>
-              <span className="text-sm">05월</span>
+              <input type="month" defaultValue="2026-05" className="px-2 py-1.5 border border-border rounded-md text-sm bg-background" />
             </div>
           </div>
-          <button className="mt-4 px-6 py-2 text-sm bg-primary text-primary-foreground rounded-md flex items-center gap-1"><Save className="w-4 h-4" /> 저 장</button>
+          <button className="mt-4 px-6 py-2 text-sm bg-primary text-primary-foreground rounded-md flex items-center gap-1" onClick={handleSave}><Save className="w-4 h-4" /> 저 장</button>
         </div>
       </div>
+
+      {/* Slot Edit Dialog */}
+      <Dialog open={editSlot !== null} onOpenChange={() => setEditSlot(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>슬롯 수정</DialogTitle></DialogHeader>
+          {editSlot !== null && (
+            <div className="space-y-3 mt-2">
+              <div className="text-sm text-muted-foreground">시간대: {slotData[editSlot].time}</div>
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-medium w-24 shrink-0">최대 세대수</label>
+                <input type="number" value={editMax} onChange={(e) => setEditMax(Number(e.target.value))} className="flex-1 px-3 py-2 border border-border rounded-md text-sm bg-background" />
+              </div>
+              <div className="flex gap-2">
+                <button className="flex-1 px-4 py-2 text-sm border border-border rounded-md bg-card" onClick={() => setEditSlot(null)}>취소</button>
+                <button className="flex-1 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md" onClick={handleSlotSave}>저장</button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
