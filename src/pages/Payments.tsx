@@ -72,8 +72,8 @@ const Payments = () => {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <select className="px-3 py-2 border border-border rounded-md text-sm bg-card">
-          <option>납부상태: 전체</option>
+        <select className="px-3 py-2 border border-border rounded-md text-sm bg-card" value={statusFilter} onChange={(e) => handleFilterChange(e.target.value)}>
+          {statusFilterOptions.map(o => <option key={o} value={o}>납부상태: {o}</option>)}
         </select>
         <select className="px-3 py-2 border border-border rounded-md text-sm bg-card">
           <option>동 선택: 전체</option>
