@@ -73,7 +73,9 @@ const Agreements = () => {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <select className="px-3 py-2 border border-border rounded-md text-sm bg-card"><option>동의서 종류: 전체</option></select>
-        <select className="px-3 py-2 border border-border rounded-md text-sm bg-card"><option>서명상태: 미서명</option></select>
+        <select className="px-3 py-2 border border-border rounded-md text-sm bg-card" value={signFilter} onChange={(e) => handleFilterChange(e.target.value)}>
+          {signFilterOptions.map(o => <option key={o} value={o}>서명상태: {o}</option>)}
+        </select>
         <div className="flex items-center border border-border rounded-md bg-card">
           <input type="text" placeholder="세대·이름 입력" className="px-3 py-2 text-sm bg-transparent outline-none" />
           <button className="px-3 py-2 text-muted-foreground"><Search className="w-4 h-4" /></button>
