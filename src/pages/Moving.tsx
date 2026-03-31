@@ -1,4 +1,5 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 const calendarData = [
   { day: 1, count: 4 }, { day: 2, count: 6 }, { day: 3, count: 8 }, { day: 4, count: 3 },
@@ -34,6 +35,8 @@ const getMovingStatus = (s: string) => {
 };
 
 const Moving = () => {
+  const [searchParams] = useSearchParams();
+  const filterParam = searchParams.get("filter");
   const weekDays = ["일", "월", "화", "수", "목", "금", "토"];
   // April 2026 starts on Wednesday (index 3)
   const startDay = 3;
