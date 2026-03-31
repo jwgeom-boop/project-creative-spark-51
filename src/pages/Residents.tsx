@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import UnitDetailDialog from "@/components/UnitDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { exportToExcel } from "@/lib/exportExcel";
 
 const getStatusBadge = (value: string) => {
   if (["발급완료", "납부완료", "완료", "유효"].includes(value)) return "status-complete";
