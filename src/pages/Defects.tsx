@@ -91,7 +91,7 @@ const Defects = () => {
           showDateRange: true,
         }}
         values={filters}
-        onChange={setFilters}
+        onChange={(v) => { setFilters(v); setPage(1); }}
       />
 
       <div className="flex flex-wrap items-center gap-2 mb-4">
