@@ -92,7 +92,8 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                     </button>
 
                     {openDropdown === item.label && (
-                      <div className="absolute top-full left-0 mt-0 bg-card border border-border rounded-md shadow-lg py-1 min-w-[160px] z-50">
+                      <div className="absolute top-full right-0 lg:left-0 lg:right-auto mt-0 bg-card border border-border rounded-md shadow-lg py-1 min-w-[160px] z-50"
+                        style={{ maxWidth: 'calc(100vw - 16px)' }}>
                         {item.children.map(child => (
                           <NavLink key={child.path} to={child.path}
                             onClick={() => setOpenDropdown(null)}
