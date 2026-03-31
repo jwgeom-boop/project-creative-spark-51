@@ -1,4 +1,6 @@
 import { Search, Download, Camera } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 const summaryData = [
   { label: "전체 접수", value: "142건" },
@@ -22,7 +24,36 @@ const getDefectStatusBadge = (status: string) => {
   return "status-error";
 };
 
+const statusFilterOptions = ["전체", "미처리", "미배정", "처리중", "완료"];
+
 const Defects = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterParam = searchParams.get("filter") || "전체";
+  const [statusFilter, setStatusFilter] = useState(filterParam);
+
+  useEffect(() => {
+    setStatusFilter(filterParam);
+  }, [filterParam]);
+
+  const handleFilterChange = (value: string) => {
+    setStatusFilter(value);
+    if (value === "전체") {
+      searchParams.delete("filter");
+    } else {
+      searchParams.set("filter", value);
+    }
+    setSearchParams(searchParams, { replace: true });
+  };
+
+  const filteredData = defectData.filter((d) => {
+    if (statusFilter === "전체") return true;
+    if (statusFilter === "미처리") return d.status !== "완료";
+    if (statusFilter === "미배정") return d.status === "미배정";
+    if (statusFilter === "처리중") return d.status === "처리중";
+    if (statusFilter === "완료") return d.status === "완료";
+    return true;
+  });
+
   return (
     <div>
       <div className="page-header">
