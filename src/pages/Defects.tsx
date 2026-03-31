@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { exportToExcel } from "@/lib/exportExcel";
 import AdvancedFilterBar, { FilterValues, applyCommonFilters } from "@/components/AdvancedFilterBar";
+import TablePagination, { paginate } from "@/components/TablePagination";
 
 const getDefectStatusBadge = (status: string) => {
   if (status === "완료") return "status-complete";
