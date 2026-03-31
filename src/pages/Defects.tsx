@@ -1,6 +1,7 @@
 import { Search, Download, Camera } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 
 const summaryData = [
   { label: "전체 접수", value: "142건" },
