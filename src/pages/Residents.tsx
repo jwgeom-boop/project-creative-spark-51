@@ -26,14 +26,28 @@ const Residents = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("residents")
-        .select("*, units(dong, ho, area, status, payment_status, permit_status, moving_status), vehicles(plate)")
+        .select("*, units(dong, ho, area, status, payment_status, permit_status, moving_status)")
         .order("created_at");
       if (error) throw error;
+
+      // Fetch vehicles separately by unit_id
+      const unitIds = data.map((r: any) => r.unit_id).filter(Boolean);
+      let vehicleMap = new Map<string, string>();
+      if (unitIds.length > 0) {
+        const { data: vehicles } = await supabase
+          .from("vehicles")
+          .select("unit_id, plate")
+          .in("unit_id", unitIds);
+        if (vehicles) {
+          vehicles.forEach((v: any) => vehicleMap.set(v.unit_id, v.plate));
+        }
+      }
+
       return data.map((r: any) => ({
         dong: r.units?.dong || "",
         unit: `${r.units?.dong} ${r.units?.ho}`,
         name: r.name, phone: r.phone,
-        car: r.vehicles?.[0]?.plate || "—",
+        car: vehicleMap.get(r.unit_id) || "—",
         qr: r.qr_status, permit: r.units?.permit_status || "미발급",
         payment: r.units?.payment_status || "미납",
         inspection: r.inspection_status,
