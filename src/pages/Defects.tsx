@@ -115,7 +115,7 @@ const Defects = () => {
           <table className="data-table">
             <thead><tr><th>번호</th><th>세대</th><th>유형</th><th>하자 내용</th><th>사진</th><th>접수일</th><th>담당업체</th><th>방문예정일</th><th>처리상태</th><th>완료처리</th></tr></thead>
             <tbody>
-              {filtered.map((d: any, i: number) => (
+              {paginate(filtered, page).map((d: any, i: number) => (
                 <tr key={i}>
                   <td>{d.no}</td><td>{d.unit}</td><td>{d.type}</td><td>{d.content}</td><td>{d.photos}</td><td>{d.dateDisplay}</td>
                   <td className={d.company === "미배정" ? "text-destructive font-medium" : ""}>{d.company}</td>
