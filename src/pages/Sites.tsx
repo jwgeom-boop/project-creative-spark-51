@@ -1,27 +1,49 @@
 import { useState } from "react";
-import { Search, Download, Plus } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-
-const siteData = [
-  { name: "○○아파트 101현장", builder: "(주)○○건설", constructor: "(주)○○주택", units: "300세대", buildings: "4개동", status: "운영중", period: "2026.03~06" },
-  { name: "△△힐스테이트 202현장", builder: "(주)△△건설", constructor: "(주)△△종건", units: "520세대", buildings: "6개동", status: "준비중", period: "2026.05~08" },
-  { name: "□□자이 303현장", builder: "(주)□□건설", constructor: "(주)□□건설", units: "180세대", buildings: "2개동", status: "완료", period: "2025.11~2026.02" },
-];
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const Sites = () => {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
+  const [newSite, setNewSite] = useState({ name: "", address: "", total_units: "" });
 
-  const filtered = siteData.filter(s => s.name.includes(search) || s.builder.includes(search));
+  const { data: sites = [], isLoading } = useQuery({
+    queryKey: ["sites"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("sites").select("*").order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
 
-  const handleAddSite = () => {
-    toast.success("현장이 등록되었습니다.");
-    setAddOpen(false);
-  };
+  const addMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("sites").insert({
+        name: newSite.name,
+        address: newSite.address,
+        total_units: parseInt(newSite.total_units) || 0,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sites"] });
+      toast.success("현장이 등록되었습니다.");
+      setAddOpen(false);
+      setNewSite({ name: "", address: "", total_units: "" });
+    },
+    onError: (e) => toast.error("등록 실패: " + e.message),
+  });
 
-  const handleSwitch = (name: string) => {
-    toast.success(`${name}(으)로 전환되었습니다.`);
+  const filtered = sites.filter((s: any) => s.name.includes(search) || (s.address || "").includes(search));
+
+  const getStatusBadge = (status: string) => {
+    if (status === "진행중") return "status-complete";
+    if (status === "준비중") return "status-pending";
+    return "status-info";
   };
 
   return (
@@ -39,39 +61,48 @@ const Sites = () => {
         <button className="ml-auto px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md flex items-center gap-1" onClick={() => setAddOpen(true)}><Plus className="w-4 h-4" /> 현장 추가</button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((site, i) => (
-          <div key={i} className="bg-card rounded-lg border border-border p-5 hover:shadow-md transition-shadow cursor-pointer">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-foreground">{site.name}</h3>
-              <span className={`status-badge ${site.status === "운영중" ? "status-complete" : site.status === "준비중" ? "status-pending" : "status-info"}`}>{site.status}</span>
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map((site: any) => (
+            <div key={site.id} className="bg-card rounded-lg border border-border p-5 hover:shadow-md transition-shadow cursor-pointer">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-foreground">{site.name}</h3>
+                <span className={`status-badge ${getStatusBadge(site.status)}`}>{site.status}</span>
+              </div>
+              <div className="space-y-1.5 text-sm text-muted-foreground">
+                <div className="flex justify-between"><span>주소</span><span className="text-foreground">{site.address || "—"}</span></div>
+                <div className="flex justify-between"><span>세대수</span><span className="text-foreground">{site.total_units}세대</span></div>
+                <div className="flex justify-between"><span>입주시작</span><span className="text-foreground">{site.move_in_start || "—"}</span></div>
+                <div className="flex justify-between"><span>입주종료</span><span className="text-foreground">{site.move_in_end || "—"}</span></div>
+              </div>
+              <button className="w-full mt-4 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md" onClick={() => toast.success(`${site.name}(으)로 전환되었습니다.`)}>현장 전환</button>
             </div>
-            <div className="space-y-1.5 text-sm text-muted-foreground">
-              <div className="flex justify-between"><span>시행사</span><span className="text-foreground">{site.builder}</span></div>
-              <div className="flex justify-between"><span>시공사</span><span className="text-foreground">{site.constructor}</span></div>
-              <div className="flex justify-between"><span>세대수</span><span className="text-foreground">{site.units}</span></div>
-              <div className="flex justify-between"><span>동수</span><span className="text-foreground">{site.buildings}</span></div>
-              <div className="flex justify-between"><span>운영기간</span><span className="text-foreground">{site.period}</span></div>
-            </div>
-            <button className="w-full mt-4 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md" onClick={() => handleSwitch(site.name)}>현장 전환</button>
-          </div>
-        ))}
-        {filtered.length === 0 && <div className="col-span-full text-center py-10 text-muted-foreground">검색 결과가 없습니다.</div>}
-      </div>
+          ))}
+          {filtered.length === 0 && <div className="col-span-full text-center py-10 text-muted-foreground">검색 결과가 없습니다.</div>}
+        </div>
+      )}
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>새 현장 등록</DialogTitle></DialogHeader>
           <div className="space-y-3 mt-2">
-            {["단지명", "시행사", "시공사", "세대수", "동수", "운영기간"].map(label => (
-              <div key={label} className="flex items-center gap-3">
-                <label className="text-sm font-medium w-20 shrink-0 text-muted-foreground">{label}</label>
-                <input type="text" className="flex-1 px-3 py-2 border border-border rounded-md text-sm bg-background" placeholder={`${label} 입력`} />
-              </div>
-            ))}
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium w-20 shrink-0 text-muted-foreground">단지명</label>
+              <input type="text" value={newSite.name} onChange={e => setNewSite(p => ({ ...p, name: e.target.value }))} className="flex-1 px-3 py-2 border border-border rounded-md text-sm bg-background" placeholder="단지명 입력" />
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium w-20 shrink-0 text-muted-foreground">주소</label>
+              <input type="text" value={newSite.address} onChange={e => setNewSite(p => ({ ...p, address: e.target.value }))} className="flex-1 px-3 py-2 border border-border rounded-md text-sm bg-background" placeholder="주소 입력" />
+            </div>
+            <div className="flex items-center gap-3">
+              <label className="text-sm font-medium w-20 shrink-0 text-muted-foreground">세대수</label>
+              <input type="number" value={newSite.total_units} onChange={e => setNewSite(p => ({ ...p, total_units: e.target.value }))} className="flex-1 px-3 py-2 border border-border rounded-md text-sm bg-background" placeholder="300" />
+            </div>
             <div className="flex gap-2 pt-2">
               <button className="flex-1 px-4 py-2 text-sm border border-border rounded-md bg-card" onClick={() => setAddOpen(false)}>취소</button>
-              <button className="flex-1 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md" onClick={handleAddSite}>등록</button>
+              <button className="flex-1 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md" onClick={() => addMutation.mutate()} disabled={!newSite.name}>등록</button>
             </div>
           </div>
         </DialogContent>
