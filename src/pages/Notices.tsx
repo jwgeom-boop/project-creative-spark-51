@@ -1,23 +1,44 @@
 import { useState } from "react";
 import { Send, FileText, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const templates = [
   "잔금 납부 안내", "동의서 서명 요청", "사전점검 일정", "하자보수 일정 안내", "이사 차량 등록", "공지 — 엘리베이터"
 ];
 
-const sendHistory = [
-  { date: "03.30 09:00", title: "잔금 납부 기한 안내", target: "248세대", rate: "74%", status: "발송완료" },
-  { date: "03.28 10:00", title: "사전점검 일정 안내", target: "300세대", rate: "91%", status: "발송완료" },
-  { date: "03.25 09:30", title: "이사 차량 사전등록 안내", target: "300세대", rate: "83%", status: "발송완료" },
-  { date: "03.20 11:00", title: "층간소음 동의서 서명 요청", target: "300세대", rate: "68%", status: "발송완료" },
-  { date: "03.15 09:00", title: "입주 일정 안내", target: "300세대", rate: "95%", status: "발송완료" },
-  { date: "04.01 09:00", title: "[예약] 잔금 최종 안내", target: "300세대", rate: "—", status: "예약됨" },
-];
-
 const Notices = () => {
   const [targetType, setTargetType] = useState("전체 세대");
   const [sendMethod, setSendMethod] = useState("앱 푸시 (권장)");
+
+  const { data: notices = [], isLoading } = useQuery({
+    queryKey: ["notices"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("notices")
+        .select("*")
+        .order("sent_date", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const handleSend = async (title: string, content: string) => {
+    const { data: sites } = await supabase.from("sites").select("id").limit(1).single();
+    if (!sites) { toast.error("현장 정보가 없습니다."); return; }
+
+    const { error } = await supabase.from("notices").insert({
+      title,
+      content,
+      site_id: sites.id,
+      status: "발송완료",
+      target_count: 300,
+      read_rate: 0,
+    });
+    if (error) { toast.error("발송 실패: " + error.message); return; }
+    toast.success("안내문이 발송되었습니다.");
+  };
 
   return (
     <div>
@@ -34,7 +55,7 @@ const Notices = () => {
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <label className="text-sm font-medium w-20 shrink-0">제 목</label>
-              <input type="text" defaultValue="잔금 납부 기한 안내" className="flex-1 px-3 py-2 border border-border rounded-md text-sm bg-background" />
+              <input id="notice-title" type="text" defaultValue="잔금 납부 기한 안내" className="flex-1 px-3 py-2 border border-border rounded-md text-sm bg-background" />
             </div>
 
             <div className="flex items-center gap-3">
@@ -69,7 +90,7 @@ const Notices = () => {
 
             <div className="flex gap-3">
               <label className="text-sm font-medium w-20 shrink-0 pt-2">내 용</label>
-              <textarea rows={6} className="flex-1 px-3 py-2 border border-border rounded-md text-sm bg-background resize-none"
+              <textarea id="notice-content" rows={6} className="flex-1 px-3 py-2 border border-border rounded-md text-sm bg-background resize-none"
                 defaultValue={`안녕하세요, {{입주자명}} 세대주님.\n\n잔금 납부 기한이 2026년 4월 7일(화)로 다가왔습니다.\n\n납부 계좌 및 금액은 앱 내 납부 내역에서 확인하시기 바랍니다.\n\n문의: 입주지원센터 02-1234-5678`} />
             </div>
 
@@ -84,7 +105,14 @@ const Notices = () => {
             <div className="flex gap-2 pt-2">
               <button className="px-4 py-2 text-sm border border-border rounded-md bg-card">미리보기</button>
               <button className="px-4 py-2 text-sm border border-border rounded-md bg-card">임시저장</button>
-              <button className="flex-1 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md flex items-center justify-center gap-1"><Send className="w-4 h-4" /> 발 송</button>
+              <button className="flex-1 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md flex items-center justify-center gap-1"
+                onClick={() => {
+                  const title = (document.getElementById("notice-title") as HTMLInputElement)?.value;
+                  const content = (document.getElementById("notice-content") as HTMLTextAreaElement)?.value;
+                  if (title) handleSend(title, content || "");
+                }}>
+                <Send className="w-4 h-4" /> 발 송
+              </button>
             </div>
           </div>
         </div>
@@ -97,20 +125,26 @@ const Notices = () => {
               <h2 className="text-sm font-semibold">발송 이력</h2>
               <button className="px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-md">템플릿 관리</button>
             </div>
-            <table className="data-table">
-              <thead><tr><th>발송일시</th><th>제목</th><th>대상</th><th>열람율</th><th>상태</th></tr></thead>
-              <tbody>
-                {sendHistory.map((h, i) => (
-                  <tr key={i}>
-                    <td>{h.date}</td>
-                    <td>{h.title}</td>
-                    <td>{h.target}</td>
-                    <td>{h.rate}</td>
-                    <td><span className={`status-badge ${h.status === "예약됨" ? "status-pending" : "status-complete"}`}>{h.status}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+              </div>
+            ) : (
+              <table className="data-table">
+                <thead><tr><th>발송일시</th><th>제목</th><th>대상</th><th>열람율</th><th>상태</th></tr></thead>
+                <tbody>
+                  {notices.map((h) => (
+                    <tr key={h.id}>
+                      <td>{new Date(h.sent_date).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" })}</td>
+                      <td>{h.title}</td>
+                      <td>{h.target_count}세대</td>
+                      <td>{h.read_rate}%</td>
+                      <td><span className={`status-badge ${h.status === "예약됨" ? "status-pending" : "status-complete"}`}>{h.status}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
 
           {/* Templates */}

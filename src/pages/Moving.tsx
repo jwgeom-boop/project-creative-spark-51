@@ -1,25 +1,7 @@
 import { ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
-
-const calendarData = [
-  { day: 1, count: 4 }, { day: 2, count: 6 }, { day: 3, count: 8 }, { day: 4, count: 3 },
-  { day: 5, count: 12 }, { day: 6, count: 8 }, { day: 7, count: 0 },
-  { day: 8, count: 7 }, { day: 9, count: 9 }, { day: 10, count: 5 }, { day: 11, count: 12 },
-  { day: 12, count: 8 }, { day: 13, count: 0 }, { day: 14, count: 0 },
-  { day: 15, count: 10 }, { day: 16, count: 11 }, { day: 17, count: 7 }, { day: 18, count: 8 },
-  { day: 19, count: 6 }, { day: 20, count: 3 }, { day: 21, count: 0 },
-  { day: 22, count: 2 }, { day: 23, count: 8 }, { day: 24, count: 10 }, { day: 25, count: 6 },
-  { day: 26, count: 4 }, { day: 27, count: 0 }, { day: 28, count: 0 },
-  { day: 29, count: 8 }, { day: 30, count: 10 },
-];
-
-const todayMoving = [
-  { unit: "101동 0201", ev: "1호기", status: "완료", time: "오전" },
-  { unit: "102동 0501", ev: "2호기", status: "완료", time: "오전" },
-  { unit: "103동 1102", ev: "1호기", status: "진행중", time: "오전" },
-  { unit: "101동 0304", ev: "1호기", status: "예정", time: "오후" },
-  { unit: "102동 0802", ev: "2호기", status: "예정", time: "오후" },
-];
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const getCountColor = (count: number) => {
   if (count === 0) return "";
@@ -38,23 +20,52 @@ const Moving = () => {
   const [searchParams] = useSearchParams();
   const filterParam = searchParams.get("filter");
   const weekDays = ["일", "월", "화", "수", "목", "금", "토"];
-  // April 2026 starts on Wednesday (index 3)
-  const startDay = 3;
+
+  const { data: movingSchedules = [], isLoading } = useQuery({
+    queryKey: ["moving_schedules"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("moving_schedules")
+        .select("*, units(dong, ho)")
+        .order("moving_date", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Build calendar for April 2026
   const totalDays = 30;
+  const startDay = 3; // April 2026 starts on Wednesday
+  const dayCounts = new Map<number, number>();
+  movingSchedules.forEach((m: any) => {
+    const d = new Date(m.moving_date);
+    if (d.getMonth() === 3 && d.getFullYear() === 2026) {
+      const day = d.getDate();
+      dayCounts.set(day, (dayCounts.get(day) || 0) + 1);
+    }
+  });
+
+  const calendarData = Array.from({ length: totalDays }, (_, i) => ({
+    day: i + 1,
+    count: dayCounts.get(i + 1) || 0,
+  }));
+
   const weeks: (typeof calendarData[0] | null)[][] = [];
   let currentWeek: (typeof calendarData[0] | null)[] = Array(startDay).fill(null);
-
   calendarData.forEach((d) => {
     currentWeek.push(d);
-    if (currentWeek.length === 7) {
-      weeks.push(currentWeek);
-      currentWeek = [];
-    }
+    if (currentWeek.length === 7) { weeks.push(currentWeek); currentWeek = []; }
   });
   if (currentWeek.length > 0) {
     while (currentWeek.length < 7) currentWeek.push(null);
     weeks.push(currentWeek);
   }
+
+  // Today's moving (use all for demo)
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayMoving = movingSchedules
+    .filter((m: any) => m.moving_date === todayStr || movingSchedules.indexOf(m) < 5)
+    .slice(0, 5);
 
   return (
     <div>
@@ -70,71 +81,72 @@ const Moving = () => {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Calendar */}
-        <div className="lg:col-span-2 bg-card rounded-lg border border-border p-4">
-          <div className="flex items-center justify-between mb-4">
-            <button className="p-1 hover:bg-accent rounded"><ChevronLeft className="w-5 h-5" /></button>
-            <h2 className="text-lg font-semibold">2026년 4월</h2>
-            <button className="p-1 hover:bg-accent rounded"><ChevronRight className="w-5 h-5" /></button>
-          </div>
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 bg-card rounded-lg border border-border p-4">
+            <div className="flex items-center justify-between mb-4">
+              <button className="p-1 hover:bg-accent rounded"><ChevronLeft className="w-5 h-5" /></button>
+              <h2 className="text-lg font-semibold">2026년 4월</h2>
+              <button className="p-1 hover:bg-accent rounded"><ChevronRight className="w-5 h-5" /></button>
+            </div>
 
-          <div className="grid grid-cols-7 gap-1">
-            {weekDays.map(d => (
-              <div key={d} className="text-center text-xs font-medium text-muted-foreground py-2">{d}</div>
-            ))}
-            {weeks.flat().map((day, i) => (
-              <div key={i} className={`min-h-[60px] border border-border rounded p-1.5 ${day ? "cursor-pointer hover:bg-accent/50" : ""}`}>
-                {day && (
-                  <>
-                    <div className="text-xs font-medium">{day.day}</div>
-                    {day.count > 0 && (
-                      <div className={`text-xs mt-1 px-1 py-0.5 rounded text-center ${getCountColor(day.count)}`}>
-                        {day.count}세대
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div className="flex gap-4 mt-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-success/20" /> 1~6세대</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-primary/10" /> 7~9세대</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-warning/20" /> 10세대↑</span>
-          </div>
-        </div>
-
-        {/* Today's Moving */}
-        <div className="bg-card rounded-lg border border-border overflow-hidden">
-          <div className="px-4 py-3 border-b border-border">
-            <h2 className="text-sm font-semibold">오늘 이사 현황 — 3.31</h2>
-          </div>
-          <table className="data-table">
-            <thead><tr><th>시간</th><th>세대</th><th>EV</th><th>상태</th></tr></thead>
-            <tbody>
-              {todayMoving.map((m, i) => (
-                <tr key={i}>
-                  <td>{m.time}</td>
-                  <td>{m.unit}</td>
-                  <td>{m.ev}</td>
-                  <td><span className={`status-badge ${getMovingStatus(m.status)}`}>{m.status}</span></td>
-                </tr>
+            <div className="grid grid-cols-7 gap-1">
+              {weekDays.map(d => (
+                <div key={d} className="text-center text-xs font-medium text-muted-foreground py-2">{d}</div>
               ))}
-            </tbody>
-          </table>
+              {weeks.flat().map((day, i) => (
+                <div key={i} className={`min-h-[60px] border border-border rounded p-1.5 ${day ? "cursor-pointer hover:bg-accent/50" : ""}`}>
+                  {day && (
+                    <>
+                      <div className="text-xs font-medium">{day.day}</div>
+                      {day.count > 0 && (
+                        <div className={`text-xs mt-1 px-1 py-0.5 rounded text-center ${getCountColor(day.count)}`}>{day.count}세대</div>
+                      )}
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
 
-          <div className="p-4 border-t border-border">
-            <h3 className="text-sm font-semibold mb-2">엘리베이터 현황</h3>
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-warning/10 rounded p-2"><div className="text-xs text-muted-foreground">1호기</div><div className="text-sm font-medium text-warning">사용중</div></div>
-              <div className="bg-success/10 rounded p-2"><div className="text-xs text-muted-foreground">2호기</div><div className="text-sm font-medium text-success">대기</div></div>
-              <div className="bg-success/10 rounded p-2"><div className="text-xs text-muted-foreground">3호기</div><div className="text-sm font-medium text-success">대기</div></div>
+            <div className="flex gap-4 mt-3 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-success/20" /> 1~6세대</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-primary/10" /> 7~9세대</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-warning/20" /> 10세대↑</span>
+            </div>
+          </div>
+
+          <div className="bg-card rounded-lg border border-border overflow-hidden">
+            <div className="px-4 py-3 border-b border-border">
+              <h2 className="text-sm font-semibold">오늘 이사 현황</h2>
+            </div>
+            <table className="data-table">
+              <thead><tr><th>시간</th><th>세대</th><th>EV</th><th>상태</th></tr></thead>
+              <tbody>
+                {todayMoving.map((m: any) => (
+                  <tr key={m.id}>
+                    <td>{m.time_slot}</td>
+                    <td>{m.units?.dong}동 {m.units?.ho}</td>
+                    <td>{m.elevator || "—"}</td>
+                    <td><span className={`status-badge ${getMovingStatus(m.status)}`}>{m.status}</span></td>
+                  </tr>
+                ))}
+                {todayMoving.length === 0 && <tr><td colSpan={4} className="text-center py-4 text-muted-foreground">오늘 이사 일정이 없습니다.</td></tr>}
+              </tbody>
+            </table>
+
+            <div className="p-4 border-t border-border">
+              <h3 className="text-sm font-semibold mb-2">엘리베이터 현황</h3>
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="bg-warning/10 rounded p-2"><div className="text-xs text-muted-foreground">1호기</div><div className="text-sm font-medium text-warning">사용중</div></div>
+                <div className="bg-success/10 rounded p-2"><div className="text-xs text-muted-foreground">2호기</div><div className="text-sm font-medium text-success">대기</div></div>
+                <div className="bg-success/10 rounded p-2"><div className="text-xs text-muted-foreground">3호기</div><div className="text-sm font-medium text-success">대기</div></div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

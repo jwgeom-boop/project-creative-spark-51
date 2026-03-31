@@ -1,55 +1,91 @@
-import { Search, Send, Download, FileText } from "lucide-react";
+import { Search, Send, Download } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-
-const agreementStats = [
-  { name: "주차장 이용 동의서", signed: 278, total: 300, percent: 93 },
-  { name: "층간소음 준수 확약서", signed: 241, total: 300, percent: 80 },
-  { name: "커뮤니티 이용 규칙", signed: 256, total: 300, percent: 85 },
-  { name: "개인정보 수집 동의", signed: 289, total: 300, percent: 96 },
-  { name: "입주민 공동규약", signed: 198, total: 300, percent: 66 },
-];
-
-const signingData = [
-  { unit: "101동 0101", name: "홍길동", parking: true, noise: true, community: true, privacy: true, common: true, date: "03.28" },
-  { unit: "101동 0102", name: "김철수", parking: true, noise: false, community: true, privacy: true, common: false, date: "일부" },
-  { unit: "102동 0201", name: "이영희", parking: true, noise: true, community: false, privacy: true, common: false, date: "일부" },
-  { unit: "102동 0302", name: "박민준", parking: false, noise: false, community: false, privacy: true, common: false, date: "—" },
-  { unit: "103동 1503", name: "최수연", parking: true, noise: true, community: true, privacy: true, common: true, date: "03.27" },
-];
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const signFilterOptions = ["전체", "미서명", "완료", "일부"];
-
-const isFullySigned = (s: typeof signingData[0]) => s.parking && s.noise && s.community && s.privacy && s.common;
-const isUnsigned = (s: typeof signingData[0]) => !s.parking && !s.noise && !s.community && !s.privacy && !s.common;
 
 const Agreements = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const filterParam = searchParams.get("filter") || "전체";
   const [signFilter, setSignFilter] = useState(filterParam);
 
-  useEffect(() => {
-    setSignFilter(filterParam);
-  }, [filterParam]);
+  useEffect(() => { setSignFilter(filterParam); }, [filterParam]);
+
+  const { data: agreements = [], isLoading: loadingAgreements } = useQuery({
+    queryKey: ["agreements"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("agreements").select("*").order("name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: signatures = [], isLoading: loadingSigs } = useQuery({
+    queryKey: ["agreement_signatures"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("agreement_signatures")
+        .select("*, units(dong, ho), agreements(name)");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: residents = [] } = useQuery({
+    queryKey: ["residents-for-agreements"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("residents").select("unit_id, name");
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const handleFilterChange = (value: string) => {
     setSignFilter(value);
-    if (value === "전체") {
-      searchParams.delete("filter");
-    } else {
-      searchParams.set("filter", value);
-    }
+    if (value === "전체") { searchParams.delete("filter"); } else { searchParams.set("filter", value); }
     setSearchParams(searchParams, { replace: true });
   };
 
-  const filteredData = signingData.filter((s) => {
+  // Build per-unit signing summary
+  const unitMap = new Map<string, { dong: string; ho: string; name: string; signed: Record<string, boolean>; lastDate: string | null }>();
+  signatures.forEach((sig: any) => {
+    const unitId = sig.unit_id;
+    if (!unitMap.has(unitId)) {
+      const resident = residents.find((r: any) => r.unit_id === unitId);
+      unitMap.set(unitId, {
+        dong: sig.units?.dong || "",
+        ho: sig.units?.ho || "",
+        name: resident?.name || "—",
+        signed: {},
+        lastDate: null,
+      });
+    }
+    const entry = unitMap.get(unitId)!;
+    entry.signed[sig.agreements?.name || sig.agreement_id] = !!sig.signed;
+    if (sig.signed_at && (!entry.lastDate || sig.signed_at > entry.lastDate)) {
+      entry.lastDate = sig.signed_at;
+    }
+  });
+
+  const agreementNames = agreements.map(a => a.name);
+  const unitRows = Array.from(unitMap.entries()).map(([, v]) => {
+    const allSigned = agreementNames.every(n => v.signed[n]);
+    const noneSigned = agreementNames.every(n => !v.signed[n]);
+    return { ...v, allSigned, noneSigned };
+  });
+
+  const filteredRows = unitRows.filter(r => {
     if (signFilter === "전체") return true;
-    if (signFilter === "완료") return isFullySigned(s);
-    if (signFilter === "미서명") return !isFullySigned(s);
-    if (signFilter === "일부") return !isFullySigned(s) && !isUnsigned(s);
+    if (signFilter === "완료") return r.allSigned;
+    if (signFilter === "미서명") return r.noneSigned;
+    if (signFilter === "일부") return !r.allSigned && !r.noneSigned;
     return true;
   });
+
+  const isLoading = loadingAgreements || loadingSigs;
 
   return (
     <div>
@@ -60,15 +96,18 @@ const Agreements = () => {
 
       {/* Agreement Stats */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
-        {agreementStats.map((a) => (
-          <div key={a.name} className="kpi-card">
-            <div className="text-xs text-muted-foreground mb-1">{a.name}</div>
-            <div className="text-lg font-bold text-foreground">{a.signed}/{a.total} <span className="text-sm font-normal text-muted-foreground">({a.percent}%)</span></div>
-            <div className="w-full bg-muted rounded-full h-1.5 mt-2">
-              <div className={`h-1.5 rounded-full ${a.percent >= 90 ? "bg-success" : a.percent >= 75 ? "bg-primary" : "bg-warning"}`} style={{ width: `${a.percent}%` }} />
+        {agreements.map((a) => {
+          const percent = a.total_count ? Math.round(((a.signed_count || 0) / a.total_count) * 100) : 0;
+          return (
+            <div key={a.id} className="kpi-card">
+              <div className="text-xs text-muted-foreground mb-1">{a.name}</div>
+              <div className="text-lg font-bold text-foreground">{a.signed_count}/{a.total_count} <span className="text-sm font-normal text-muted-foreground">({percent}%)</span></div>
+              <div className="w-full bg-muted rounded-full h-1.5 mt-2">
+                <div className={`h-1.5 rounded-full ${percent >= 90 ? "bg-success" : percent >= 75 ? "bg-primary" : "bg-warning"}`} style={{ width: `${percent}%` }} />
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Filters */}
@@ -84,36 +123,41 @@ const Agreements = () => {
         <div className="ml-auto flex gap-2">
           <button className="px-4 py-2 text-sm bg-destructive text-destructive-foreground rounded-md flex items-center gap-1"><Send className="w-4 h-4" /> 미서명 알림 발송</button>
           <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1"><Download className="w-4 h-4" /> PDF 일괄 다운로드</button>
-          <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md">서명 추가</button>
         </div>
       </div>
 
       {/* Table */}
       <div className="bg-card rounded-lg border border-border overflow-x-auto">
-        <table className="data-table">
-          <thead>
-            <tr><th>세대</th><th>입주자</th><th>주차장</th><th>층간소음</th><th>커뮤니티</th><th>개인정보</th><th>공동규약</th><th>서명일시</th><th>미서명 알림</th></tr>
-          </thead>
-          <tbody>
-            {filteredData.map((s, i) => (
-              <tr key={i}>
-                <td>{s.unit}</td>
-                <td className="font-medium">{s.name}</td>
-                <td>{s.parking ? <span className="text-success">✔</span> : <span className="text-destructive">✗</span>}</td>
-                <td>{s.noise ? <span className="text-success">✔</span> : <span className="text-destructive">✗</span>}</td>
-                <td>{s.community ? <span className="text-success">✔</span> : <span className="text-destructive">✗</span>}</td>
-                <td>{s.privacy ? <span className="text-success">✔</span> : <span className="text-destructive">✗</span>}</td>
-                <td>{s.common ? <span className="text-success">✔</span> : <span className="text-destructive">✗</span>}</td>
-                <td>{s.date}</td>
-                <td>
-                  {s.date === "03.28" || s.date === "03.27" ? <span className="text-success text-sm">✔</span> : (
-                    <button className="text-primary text-sm hover:underline">발송</button>
-                  )}
-                </td>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" /></div>
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>세대</th><th>입주자</th>
+                {agreementNames.map(n => <th key={n}>{n.length > 4 ? n.slice(0, 4) : n}</th>)}
+                <th>서명일시</th><th>미서명 알림</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredRows.map((r, i) => (
+                <tr key={i}>
+                  <td>{r.dong}동 {r.ho}</td>
+                  <td className="font-medium">{r.name}</td>
+                  {agreementNames.map(n => (
+                    <td key={n}>{r.signed[n] ? <span className="text-success">✔</span> : <span className="text-destructive">✗</span>}</td>
+                  ))}
+                  <td>{r.lastDate ? new Date(r.lastDate).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" }) : "—"}</td>
+                  <td>
+                    {r.allSigned ? <span className="text-success text-sm">✔</span> : (
+                      <button className="text-primary text-sm hover:underline" onClick={() => toast.info("미서명 알림 발송")}>발송</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <div className="mt-4 p-3 bg-accent rounded-lg text-sm text-muted-foreground">
