@@ -1,4 +1,5 @@
-import { Search, Download, Settings, Plus } from "lucide-react";
+import { Search, Download, Settings, Plus, AlertCircle } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 const timeSlots = [
   { time: "09:00~10:00", checkin: "30/30", waiting: "0명" },
@@ -26,6 +27,9 @@ const defectStats = [
 ];
 
 const Inspection = () => {
+  const [searchParams] = useSearchParams();
+  const filterParam = searchParams.get("filter");
+
   return (
     <div>
       <div className="page-header">
