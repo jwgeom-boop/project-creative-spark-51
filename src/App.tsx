@@ -15,6 +15,12 @@ import Notices from "./pages/Notices";
 import Defects from "./pages/Defects";
 import CSChat from "./pages/CSChat";
 import SiteSettings from "./pages/SiteSettings";
+import Agreements from "./pages/Agreements";
+import Vehicles from "./pages/Vehicles";
+import Permits from "./pages/Permits";
+import Announcements from "./pages/Announcements";
+import DefectReport from "./pages/DefectReport";
+import Accounts from "./pages/Accounts";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +44,12 @@ const App = () => (
             <Route path="/defects" element={<Defects />} />
             <Route path="/cs" element={<CSChat />} />
             <Route path="/settings" element={<SiteSettings />} />
+            <Route path="/agreements" element={<Agreements />} />
+            <Route path="/vehicles" element={<Vehicles />} />
+            <Route path="/permits" element={<Permits />} />
+            <Route path="/announcements" element={<Announcements />} />
+            <Route path="/defect-report" element={<DefectReport />} />
+            <Route path="/accounts" element={<Accounts />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AdminLayout>
