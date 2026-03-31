@@ -93,7 +93,9 @@ const Permits = () => {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <select className="px-3 py-2 border border-border rounded-md text-sm bg-card"><option>발급상태: 승인대기</option></select>
+        <select className="px-3 py-2 border border-border rounded-md text-sm bg-card" value={statusFilter} onChange={(e) => handleFilterChange(e.target.value)}>
+          {statusFilterOptions.map(o => <option key={o} value={o}>발급상태: {o}</option>)}
+        </select>
         <select className="px-3 py-2 border border-border rounded-md text-sm bg-card"><option>동 선택: 전체</option></select>
         <div className="flex items-center border border-border rounded-md bg-card">
           <input type="text" placeholder="세대·이름 입력" className="px-3 py-2 text-sm bg-transparent outline-none" />
