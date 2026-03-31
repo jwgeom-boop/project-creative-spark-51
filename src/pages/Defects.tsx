@@ -1,4 +1,6 @@
 import { Search, Download, Camera } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 const summaryData = [
   { label: "전체 접수", value: "142건" },
@@ -22,7 +24,36 @@ const getDefectStatusBadge = (status: string) => {
   return "status-error";
 };
 
+const statusFilterOptions = ["전체", "미처리", "미배정", "처리중", "완료"];
+
 const Defects = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterParam = searchParams.get("filter") || "전체";
+  const [statusFilter, setStatusFilter] = useState(filterParam);
+
+  useEffect(() => {
+    setStatusFilter(filterParam);
+  }, [filterParam]);
+
+  const handleFilterChange = (value: string) => {
+    setStatusFilter(value);
+    if (value === "전체") {
+      searchParams.delete("filter");
+    } else {
+      searchParams.set("filter", value);
+    }
+    setSearchParams(searchParams, { replace: true });
+  };
+
+  const filteredData = defectData.filter((d) => {
+    if (statusFilter === "전체") return true;
+    if (statusFilter === "미처리") return d.status !== "완료";
+    if (statusFilter === "미배정") return d.status === "미배정";
+    if (statusFilter === "처리중") return d.status === "처리중";
+    if (statusFilter === "완료") return d.status === "완료";
+    return true;
+  });
+
   return (
     <div>
       <div className="page-header">
@@ -43,7 +74,9 @@ const Defects = () => {
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <select className="px-3 py-2 border border-border rounded-md text-sm bg-card"><option>유형: 전체</option></select>
-        <select className="px-3 py-2 border border-border rounded-md text-sm bg-card"><option>상태: 전체</option></select>
+        <select className="px-3 py-2 border border-border rounded-md text-sm bg-card" value={statusFilter} onChange={(e) => handleFilterChange(e.target.value)}>
+          {statusFilterOptions.map(o => <option key={o} value={o}>상태: {o}</option>)}
+        </select>
         <div className="flex items-center border border-border rounded-md bg-card">
           <input type="text" placeholder="세대·이름 검색" className="px-3 py-2 text-sm bg-transparent outline-none" />
           <button className="px-3 py-2 text-muted-foreground"><Search className="w-4 h-4" /></button>
@@ -61,7 +94,7 @@ const Defects = () => {
             <tr><th>번호</th><th>세대</th><th>유형</th><th>하자 내용</th><th>사진</th><th>접수일</th><th>담당업체</th><th>방문예정일</th><th>처리상태</th><th>완료처리</th></tr>
           </thead>
           <tbody>
-            {defectData.map((d, i) => (
+            {filteredData.map((d, i) => (
               <tr key={i}>
                 <td>{d.no}</td>
                 <td>{d.unit}</td>

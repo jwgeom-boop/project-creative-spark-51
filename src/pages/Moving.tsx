@@ -1,4 +1,5 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 const calendarData = [
   { day: 1, count: 4 }, { day: 2, count: 6 }, { day: 3, count: 8 }, { day: 4, count: 3 },
@@ -34,6 +35,8 @@ const getMovingStatus = (s: string) => {
 };
 
 const Moving = () => {
+  const [searchParams] = useSearchParams();
+  const filterParam = searchParams.get("filter");
   const weekDays = ["일", "월", "화", "수", "목", "금", "토"];
   // April 2026 starts on Wednesday (index 3)
   const startDay = 3;
@@ -59,6 +62,13 @@ const Moving = () => {
         <h1 className="page-title">이사 예약 캘린더</h1>
         <p className="page-description">이사날짜·시간대 예약 · 엘리베이터 배정 · 이삿짐 차량 QR 현황</p>
       </div>
+
+      {filterParam && (
+        <div className="mb-4 p-3 bg-warning/10 border border-warning/30 rounded-lg flex items-center gap-2 text-sm text-warning">
+          <AlertCircle className="w-4 h-4" />
+          <span>현재 필터: <strong>{filterParam}</strong> — 해당 조건의 세대를 확인하세요.</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendar */}

@@ -1,4 +1,6 @@
 import { Search, Download, Send } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 const summaryData = [
   { label: "전체 세대", value: "300세대" },
@@ -10,10 +12,10 @@ const summaryData = [
 
 const paymentData = [
   { unit: "101동 0101", name: "홍길동", balance: "2,600,000", mid: "완료", option: "850,000", ext: "1,200,000", etc: "200,000", total: "4,850,000", status: "납부완료", confirm: "승인완료" },
-  { unit: "101동 0102", name: "김철수", balance: "2,600,000", mid: "완료", option: "미선택", ext: "750,000", etc: "200,000", total: "3,550,000", status: "미 납", confirm: "승인대기" },
+  { unit: "101동 0102", name: "김철수", balance: "2,600,000", mid: "완료", option: "미선택", ext: "750,000", etc: "200,000", total: "3,550,000", status: "미납", confirm: "승인대기" },
   { unit: "102동 0201", name: "이영희", balance: "2,600,000", mid: "완료", option: "850,000", ext: "미선택", etc: "200,000", total: "3,650,000", status: "납부완료", confirm: "승인완료" },
   { unit: "102동 0302", name: "박민준", balance: "2,600,000", mid: "완료", option: "850,000", ext: "1,200,000", etc: "200,000", total: "4,850,000", status: "연체 5일", confirm: "승인대기" },
-  { unit: "103동 1503", name: "최수연", balance: "2,600,000", mid: "완료", option: "미선택", ext: "미선택", etc: "200,000", total: "2,800,000", status: "미 납", confirm: "승인대기" },
+  { unit: "103동 1503", name: "최수연", balance: "2,600,000", mid: "완료", option: "미선택", ext: "미선택", etc: "200,000", total: "2,800,000", status: "미납", confirm: "승인대기" },
 ];
 
 const getPaymentStatusBadge = (status: string) => {
@@ -22,7 +24,35 @@ const getPaymentStatusBadge = (status: string) => {
   return "status-pending";
 };
 
+const statusFilterOptions = ["전체", "납부완료", "미납", "연체"];
+
 const Payments = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterParam = searchParams.get("filter") || "전체";
+  const [statusFilter, setStatusFilter] = useState(filterParam);
+
+  useEffect(() => {
+    setStatusFilter(filterParam);
+  }, [filterParam]);
+
+  const handleFilterChange = (value: string) => {
+    setStatusFilter(value);
+    if (value === "전체") {
+      searchParams.delete("filter");
+    } else {
+      searchParams.set("filter", value);
+    }
+    setSearchParams(searchParams, { replace: true });
+  };
+
+  const filteredData = paymentData.filter((p) => {
+    if (statusFilter === "전체") return true;
+    if (statusFilter === "미납") return p.status === "미납";
+    if (statusFilter === "연체") return p.status.includes("연체");
+    if (statusFilter === "납부완료") return p.status === "납부완료";
+    return true;
+  });
+
   return (
     <div>
       <div className="page-header">
@@ -42,8 +72,8 @@ const Payments = () => {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <select className="px-3 py-2 border border-border rounded-md text-sm bg-card">
-          <option>납부상태: 전체</option>
+        <select className="px-3 py-2 border border-border rounded-md text-sm bg-card" value={statusFilter} onChange={(e) => handleFilterChange(e.target.value)}>
+          {statusFilterOptions.map(o => <option key={o} value={o}>납부상태: {o}</option>)}
         </select>
         <select className="px-3 py-2 border border-border rounded-md text-sm bg-card">
           <option>동 선택: 전체</option>
@@ -68,7 +98,7 @@ const Payments = () => {
             </tr>
           </thead>
           <tbody>
-            {paymentData.map((p, i) => (
+            {filteredData.map((p, i) => (
               <tr key={i}>
                 <td>{p.unit}</td>
                 <td className="font-medium">{p.name}</td>

@@ -1,4 +1,6 @@
 import { Search, Download, Send, ArrowRight } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 const summary = [
   { label: "전체 세대", value: "300세대" },
@@ -10,10 +12,10 @@ const summary = [
 
 const permitData = [
   { unit: "101동 0101", name: "홍길동", payment: "납부완료", confirm: "확인완료", approvedAt: "03.28 14:00", status: "발급완료", expiry: "2026.12.31", qr: true },
-  { unit: "101동 0102", name: "김철수", payment: "미 납", confirm: "—", approvedAt: "—", status: "미 발 급", expiry: "—", qr: false },
+  { unit: "101동 0102", name: "김철수", payment: "미납", confirm: "—", approvedAt: "—", status: "미발급", expiry: "—", qr: false },
   { unit: "102동 0201", name: "이영희", payment: "납부완료", confirm: "확인완료", approvedAt: "03.29 09:30", status: "발급완료", expiry: "2026.12.31", qr: true },
-  { unit: "102동 0302", name: "박민준", payment: "납부완료", confirm: "승인대기", approvedAt: "—", status: "승인 대기", expiry: "—", qr: false },
-  { unit: "103동 1503", name: "최수연", payment: "납부완료", confirm: "승인대기", approvedAt: "—", status: "승인 대기", expiry: "—", qr: false },
+  { unit: "102동 0302", name: "박민준", payment: "납부완료", confirm: "승인대기", approvedAt: "—", status: "승인대기", expiry: "—", qr: false },
+  { unit: "103동 1503", name: "최수연", payment: "납부완료", confirm: "승인대기", approvedAt: "—", status: "승인대기", expiry: "—", qr: false },
 ];
 
 const getStatusBadge = (s: string) => {
@@ -22,7 +24,35 @@ const getStatusBadge = (s: string) => {
   return "status-error";
 };
 
+const statusFilterOptions = ["전체", "발급완료", "승인대기", "미발급"];
+
 const Permits = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterParam = searchParams.get("filter") || "전체";
+  const [statusFilter, setStatusFilter] = useState(filterParam);
+
+  useEffect(() => {
+    setStatusFilter(filterParam);
+  }, [filterParam]);
+
+  const handleFilterChange = (value: string) => {
+    setStatusFilter(value);
+    if (value === "전체") {
+      searchParams.delete("filter");
+    } else {
+      searchParams.set("filter", value);
+    }
+    setSearchParams(searchParams, { replace: true });
+  };
+
+  const filteredData = permitData.filter((p) => {
+    if (statusFilter === "전체") return true;
+    if (statusFilter === "미발급") return p.status === "미발급";
+    if (statusFilter === "승인대기") return p.status === "승인대기";
+    if (statusFilter === "발급완료") return p.status === "발급완료";
+    return true;
+  });
+
   return (
     <div>
       <div className="page-header">
@@ -63,7 +93,9 @@ const Permits = () => {
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
-        <select className="px-3 py-2 border border-border rounded-md text-sm bg-card"><option>발급상태: 승인대기</option></select>
+        <select className="px-3 py-2 border border-border rounded-md text-sm bg-card" value={statusFilter} onChange={(e) => handleFilterChange(e.target.value)}>
+          {statusFilterOptions.map(o => <option key={o} value={o}>발급상태: {o}</option>)}
+        </select>
         <select className="px-3 py-2 border border-border rounded-md text-sm bg-card"><option>동 선택: 전체</option></select>
         <div className="flex items-center border border-border rounded-md bg-card">
           <input type="text" placeholder="세대·이름 입력" className="px-3 py-2 text-sm bg-transparent outline-none" />
@@ -81,7 +113,7 @@ const Permits = () => {
             <tr><th>세대</th><th>입주자</th><th>잔금납부</th><th>납부확인</th><th>승인일시</th><th>발급상태</th><th>유효기간</th><th>QR</th><th>관리</th></tr>
           </thead>
           <tbody>
-            {permitData.map((p, i) => (
+            {filteredData.map((p, i) => (
               <tr key={i}>
                 <td>{p.unit}</td>
                 <td className="font-medium">{p.name}</td>
