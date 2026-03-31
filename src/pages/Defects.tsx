@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { exportToExcel } from "@/lib/exportExcel";
 
 const getDefectStatusBadge = (status: string) => {
   if (status === "완료") return "status-complete";
@@ -90,7 +91,14 @@ const Defects = () => {
         </div>
         <div className="ml-auto flex gap-2">
           <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md" onClick={() => toast.success("미배정 건이 일괄 배정되었습니다.")}>일괄 배정</button>
-          <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => toast.success("엑셀 파일이 다운로드되었습니다.")}><Download className="w-4 h-4" /> 엑셀</button>
+<button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => {
+                exportToExcel(filteredData, [
+                  { key: "no", label: "번호" }, { key: "unit", label: "세대" }, { key: "type", label: "유형" },
+                  { key: "content", label: "하자내용" }, { key: "date", label: "접수일" }, { key: "company", label: "담당업체" },
+                  { key: "visitDate", label: "방문예정일" }, { key: "status", label: "처리상태" },
+                ], "하자보수");
+                toast.success("엑셀 파일이 다운로드되었습니다.");
+              }}><Download className="w-4 h-4" /> 엑셀</button>
         </div>
       </div>
 

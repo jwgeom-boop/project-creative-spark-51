@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import UnitDetailDialog from "@/components/UnitDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { exportToExcel } from "@/lib/exportExcel";
 
 const getStatusBadge = (value: string) => {
   if (["발급완료", "납부완료", "완료", "유효"].includes(value)) return "status-complete";
@@ -74,7 +75,14 @@ const Residents = () => {
         <div className="ml-auto flex gap-2">
           <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md flex items-center gap-1" onClick={() => toast.success("QR 일괄발급이 완료되었습니다.")}><QrCode className="w-4 h-4" /> QR 일괄발급</button>
           <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md flex items-center gap-1" onClick={() => toast.success("입주증 일괄승인이 완료되었습니다.")}><CreditCard className="w-4 h-4" /> 입주증 일괄승인</button>
-          <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => toast.success("엑셀 파일이 다운로드되었습니다.")}><Download className="w-4 h-4" /> 엑셀 다운로드</button>
+<button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => {
+                exportToExcel(filtered, [
+                  { key: "unit", label: "세대" }, { key: "name", label: "입주자명" }, { key: "phone", label: "연락처" },
+                  { key: "car", label: "차량번호" }, { key: "qr", label: "QR상태" }, { key: "permit", label: "입주증" },
+                  { key: "payment", label: "잔금" }, { key: "inspection", label: "사검예약" }, { key: "movingDate", label: "이사일" },
+                ], "입주자목록");
+                toast.success("엑셀 파일이 다운로드되었습니다.");
+              }}><Download className="w-4 h-4" /> 엑셀 다운로드</button>
         </div>
       </div>
 
