@@ -109,7 +109,7 @@ const Residents = () => {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r: any, i: number) => (
+              {paginate(filtered, page).map((r: any, i: number) => (
                 <tr key={i} className="cursor-pointer hover:bg-accent/50" onClick={() => { setSelectedUnit(toUnitData(r)); setDialogOpen(true); }}>
                   <td onClick={(e) => e.stopPropagation()}><input type="checkbox" /></td>
                   <td>{r.unit}</td>
