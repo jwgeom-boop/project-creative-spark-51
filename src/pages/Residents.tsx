@@ -1,5 +1,6 @@
-import { Search, Download, QrCode, CreditCard } from "lucide-react";
 import { useState } from "react";
+import { Search, Download, QrCode, CreditCard } from "lucide-react";
+import { toast } from "sonner";
 import UnitDetailDialog from "@/components/UnitDetailDialog";
 
 const residentData = [
@@ -29,11 +30,20 @@ const toUnitData = (r: typeof residentData[0]) => {
 const Residents = () => {
   const [selectedUnit, setSelectedUnit] = useState<ReturnType<typeof toUnitData> | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("전체");
 
   const handleRowClick = (r: typeof residentData[0]) => {
     setSelectedUnit(toUnitData(r));
     setDialogOpen(true);
   };
+
+  const filtered = residentData.filter(r => {
+    if (search && !r.name.includes(search) && !r.phone.includes(search) && !r.unit.includes(search)) return false;
+    if (statusFilter === "입주완료" && r.inspection !== "완료") return false;
+    if (statusFilter === "미입주" && r.inspection === "완료") return false;
+    return true;
+  });
 
   return (
     <div>
@@ -44,16 +54,18 @@ const Residents = () => {
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <div className="flex items-center border border-border rounded-md bg-card">
-          <input type="text" placeholder="이름 / 연락처 / 세대" className="px-3 py-2 text-sm bg-transparent outline-none" />
+          <input type="text" placeholder="이름 / 연락처 / 세대" value={search} onChange={(e) => setSearch(e.target.value)} className="px-3 py-2 text-sm bg-transparent outline-none" />
           <button className="px-3 py-2 text-muted-foreground"><Search className="w-4 h-4" /></button>
         </div>
-        <select className="px-3 py-2 border border-border rounded-md text-sm bg-card">
-          <option>입주상태: 전체</option>
+        <select className="px-3 py-2 border border-border rounded-md text-sm bg-card" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <option value="전체">입주상태: 전체</option>
+          <option value="입주완료">입주완료</option>
+          <option value="미입주">미입주</option>
         </select>
         <div className="ml-auto flex gap-2">
-          <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md flex items-center gap-1"><QrCode className="w-4 h-4" /> QR 일괄발급</button>
-          <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md flex items-center gap-1"><CreditCard className="w-4 h-4" /> 입주증 일괄승인</button>
-          <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1"><Download className="w-4 h-4" /> 엑셀 다운로드</button>
+          <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md flex items-center gap-1" onClick={() => toast.success("QR 일괄발급이 완료되었습니다.")}><QrCode className="w-4 h-4" /> QR 일괄발급</button>
+          <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md flex items-center gap-1" onClick={() => toast.success("입주증 일괄승인이 완료되었습니다.")}><CreditCard className="w-4 h-4" /> 입주증 일괄승인</button>
+          <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => toast.success("엑셀 파일이 다운로드되었습니다.")}><Download className="w-4 h-4" /> 엑셀 다운로드</button>
         </div>
       </div>
 
@@ -67,7 +79,7 @@ const Residents = () => {
             </tr>
           </thead>
           <tbody>
-            {residentData.map((r, i) => (
+            {filtered.map((r, i) => (
               <tr key={i} className="cursor-pointer hover:bg-accent/50" onClick={() => handleRowClick(r)}>
                 <td onClick={(e) => e.stopPropagation()}><input type="checkbox" /></td>
                 <td>{r.unit}</td>
@@ -81,6 +93,7 @@ const Residents = () => {
                 <td>{r.movingDate}</td>
               </tr>
             ))}
+            {filtered.length === 0 && <tr><td colSpan={10} className="text-center py-6 text-muted-foreground">검색 결과가 없습니다.</td></tr>}
           </tbody>
         </table>
       </div>
