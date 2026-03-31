@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { exportToExcel } from "@/lib/exportExcel";
 
 const getPaymentStatusBadge = (status: string) => {
   if (status === "납부완료" || status === "승인완료") return "status-complete";
