@@ -1,10 +1,11 @@
-import { useState } from "react";
-import { Search, Download, QrCode, CreditCard } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Download, QrCode, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import UnitDetailDialog from "@/components/UnitDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { exportToExcel } from "@/lib/exportExcel";
+import AdvancedFilterBar, { FilterValues, applyCommonFilters } from "@/components/AdvancedFilterBar";
 
 const getStatusBadge = (value: string) => {
   if (["발급완료", "납부완료", "완료", "유효"].includes(value)) return "status-complete";
@@ -16,8 +17,7 @@ const getStatusBadge = (value: string) => {
 const Residents = () => {
   const [selectedUnit, setSelectedUnit] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("전체");
+  const [filters, setFilters] = useState<FilterValues>({ search: "", dong: "전체", status: "전체" });
 
   const { data: residents = [], isLoading } = useQuery({
     queryKey: ["residents"],
@@ -28,6 +28,7 @@ const Residents = () => {
         .order("created_at");
       if (error) throw error;
       return data.map((r: any) => ({
+        dong: r.units?.dong || "",
         unit: `${r.units?.dong} ${r.units?.ho}`,
         name: r.name, phone: r.phone,
         car: r.vehicles?.[0]?.plate || "—",
@@ -40,6 +41,8 @@ const Residents = () => {
     },
   });
 
+  const dongOptions = useMemo(() => [...new Set(residents.map((r: any) => r.dong))].filter(Boolean).sort(), [residents]);
+
   const toUnitData = (r: any) => ({
     dong: r._unit?.dong || "", ho: r._unit?.ho || "", area: r._unit?.area || "84㎡",
     name: r.name, phone: r.phone,
@@ -48,11 +51,10 @@ const Residents = () => {
     moving: r.movingDate !== "—" ? "예약완료" : "미예약",
   });
 
-  const filtered = residents.filter((r: any) => {
-    if (search && !r.name.includes(search) && !r.phone.includes(search) && !r.unit.includes(search)) return false;
-    if (statusFilter === "입주완료" && r.inspection !== "완료") return false;
-    if (statusFilter === "미입주" && r.inspection === "완료") return false;
-    return true;
+  const filtered = applyCommonFilters(residents, filters, {
+    searchFields: ["name", "phone", "unit"],
+    statusField: "inspection",
+    dongField: "dong",
   });
 
   return (
@@ -62,27 +64,33 @@ const Residents = () => {
         <p className="page-description">QR 관리 · 입주증 발급·승인 · 차량 등록 현황</p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <div className="flex items-center border border-border rounded-md bg-card">
-          <input type="text" placeholder="이름 / 연락처 / 세대" value={search} onChange={(e) => setSearch(e.target.value)} className="px-3 py-2 text-sm bg-transparent outline-none" />
-          <button className="px-3 py-2 text-muted-foreground"><Search className="w-4 h-4" /></button>
-        </div>
-        <select className="px-3 py-2 border border-border rounded-md text-sm bg-card" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          <option value="전체">입주상태: 전체</option>
-          <option value="입주완료">입주완료</option>
-          <option value="미입주">미입주</option>
-        </select>
+      <AdvancedFilterBar
+        config={{
+          searchPlaceholder: "이름 / 연락처 / 세대",
+          dongOptions,
+          statusOptions: [
+            { label: "전체", value: "전체" },
+            { label: "완료", value: "완료" },
+            { label: "미예약", value: "미예약" },
+          ],
+          statusLabel: "사검상태",
+        }}
+        values={filters}
+        onChange={setFilters}
+      />
+
+      <div className="flex flex-wrap items-center gap-2 mb-4">
         <div className="ml-auto flex gap-2">
           <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md flex items-center gap-1" onClick={() => toast.success("QR 일괄발급이 완료되었습니다.")}><QrCode className="w-4 h-4" /> QR 일괄발급</button>
           <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md flex items-center gap-1" onClick={() => toast.success("입주증 일괄승인이 완료되었습니다.")}><CreditCard className="w-4 h-4" /> 입주증 일괄승인</button>
-<button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => {
-                exportToExcel(filtered, [
-                  { key: "unit", label: "세대" }, { key: "name", label: "입주자명" }, { key: "phone", label: "연락처" },
-                  { key: "car", label: "차량번호" }, { key: "qr", label: "QR상태" }, { key: "permit", label: "입주증" },
-                  { key: "payment", label: "잔금" }, { key: "inspection", label: "사검예약" }, { key: "movingDate", label: "이사일" },
-                ], "입주자목록");
-                toast.success("엑셀 파일이 다운로드되었습니다.");
-              }}><Download className="w-4 h-4" /> 엑셀 다운로드</button>
+          <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => {
+            exportToExcel(filtered, [
+              { key: "unit", label: "세대" }, { key: "name", label: "입주자명" }, { key: "phone", label: "연락처" },
+              { key: "car", label: "차량번호" }, { key: "qr", label: "QR상태" }, { key: "permit", label: "입주증" },
+              { key: "payment", label: "잔금" }, { key: "inspection", label: "사검예약" }, { key: "movingDate", label: "이사일" },
+            ], "입주자목록");
+            toast.success("엑셀 파일이 다운로드되었습니다.");
+          }}><Download className="w-4 h-4" /> 엑셀 다운로드</button>
         </div>
       </div>
 
