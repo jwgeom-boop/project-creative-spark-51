@@ -1,10 +1,11 @@
-import { Search, Download, Camera } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Download } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
-import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { exportToExcel } from "@/lib/exportExcel";
+import AdvancedFilterBar, { FilterValues, applyCommonFilters } from "@/components/AdvancedFilterBar";
 
 const getDefectStatusBadge = (status: string) => {
   if (status === "완료") return "status-complete";
@@ -12,15 +13,11 @@ const getDefectStatusBadge = (status: string) => {
   return "status-error";
 };
 
-const statusFilterOptions = ["전체", "미처리", "미배정", "처리중", "완료"];
-
 const Defects = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const filterParam = searchParams.get("filter") || "전체";
-  const [statusFilter, setStatusFilter] = useState(filterParam);
-  const [search, setSearch] = useState("");
-
-  useEffect(() => { setStatusFilter(filterParam); }, [filterParam]);
+  const [searchParams] = useSearchParams();
+  const [filters, setFilters] = useState<FilterValues>({
+    search: "", dong: "전체", status: searchParams.get("filter") || "전체",
+  });
 
   const { data: defects = [], isLoading } = useQuery({
     queryKey: ["defects"],
@@ -32,16 +29,20 @@ const Defects = () => {
       if (error) throw error;
       return data.map((d: any, i: number) => ({
         no: String(i + 1).padStart(3, "0"),
+        dong: d.units?.dong || "",
         unit: `${d.units?.dong} ${d.units?.ho}`,
         type: d.defect_type, content: d.content,
         photos: d.photos?.length > 0 ? "📷" : "—",
-        date: d.report_date ? new Date(d.report_date).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" }) : "—",
+        date: d.report_date || "",
+        dateDisplay: d.report_date ? new Date(d.report_date).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" }) : "—",
         company: d.company || "미배정",
         visitDate: d.visit_date ? new Date(d.visit_date).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" }) : "—",
         status: d.status,
       }));
     },
   });
+
+  const dongOptions = useMemo(() => [...new Set(defects.map((d: any) => d.dong))].filter(Boolean).sort(), [defects]);
 
   const summary = [
     { label: "전체 접수", value: `${defects.length}건` },
@@ -50,20 +51,12 @@ const Defects = () => {
     { label: "완료", value: `${defects.filter((d: any) => d.status === "완료").length}건`, color: "text-success" },
   ];
 
-  const handleFilterChange = (value: string) => {
-    setStatusFilter(value);
-    if (value === "전체") { searchParams.delete("filter"); } else { searchParams.set("filter", value); }
-    setSearchParams(searchParams, { replace: true });
-  };
-
-  const filteredData = defects.filter((d: any) => {
-    if (statusFilter === "전체") return true;
-    if (statusFilter === "미처리") return d.status !== "완료";
-    if (statusFilter === "미배정") return d.status === "미배정";
-    if (statusFilter === "처리중") return d.status === "처리중";
-    if (statusFilter === "완료") return d.status === "완료";
-    return true;
-  }).filter((d: any) => !search || d.unit.includes(search) || d.content.includes(search));
+  const filtered = applyCommonFilters(defects, filters, {
+    searchFields: ["unit", "content", "type"],
+    statusField: "status",
+    dongField: "dong",
+    dateField: "date",
+  });
 
   return (
     <div>
@@ -81,24 +74,35 @@ const Defects = () => {
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 mb-4">
-        <select className="px-3 py-2 border border-border rounded-md text-sm bg-card" value={statusFilter} onChange={(e) => handleFilterChange(e.target.value)}>
-          {statusFilterOptions.map(o => <option key={o} value={o}>상태: {o}</option>)}
-        </select>
-        <div className="flex items-center border border-border rounded-md bg-card">
-          <input type="text" placeholder="세대·내용 검색" value={search} onChange={(e) => setSearch(e.target.value)} className="px-3 py-2 text-sm bg-transparent outline-none" />
-          <button className="px-3 py-2 text-muted-foreground"><Search className="w-4 h-4" /></button>
-        </div>
+      <AdvancedFilterBar
+        config={{
+          searchPlaceholder: "세대 / 하자내용 / 유형 검색",
+          dongOptions,
+          statusOptions: [
+            { label: "전체", value: "전체" },
+            { label: "미처리", value: "미처리" },
+            { label: "미배정", value: "미배정" },
+            { label: "처리중", value: "처리중" },
+            { label: "완료", value: "완료" },
+          ],
+          statusLabel: "상태",
+          showDateRange: true,
+        }}
+        values={filters}
+        onChange={setFilters}
+      />
+
+      <div className="flex flex-wrap items-center gap-2 mb-4">
         <div className="ml-auto flex gap-2">
           <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md" onClick={() => toast.success("미배정 건이 일괄 배정되었습니다.")}>일괄 배정</button>
-<button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => {
-                exportToExcel(filteredData, [
-                  { key: "no", label: "번호" }, { key: "unit", label: "세대" }, { key: "type", label: "유형" },
-                  { key: "content", label: "하자내용" }, { key: "date", label: "접수일" }, { key: "company", label: "담당업체" },
-                  { key: "visitDate", label: "방문예정일" }, { key: "status", label: "처리상태" },
-                ], "하자보수");
-                toast.success("엑셀 파일이 다운로드되었습니다.");
-              }}><Download className="w-4 h-4" /> 엑셀</button>
+          <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => {
+            exportToExcel(filtered, [
+              { key: "no", label: "번호" }, { key: "unit", label: "세대" }, { key: "type", label: "유형" },
+              { key: "content", label: "하자내용" }, { key: "dateDisplay", label: "접수일" }, { key: "company", label: "담당업체" },
+              { key: "visitDate", label: "방문예정일" }, { key: "status", label: "처리상태" },
+            ], "하자보수");
+            toast.success("엑셀 파일이 다운로드되었습니다.");
+          }}><Download className="w-4 h-4" /> 엑셀</button>
         </div>
       </div>
 
@@ -109,9 +113,9 @@ const Defects = () => {
           <table className="data-table">
             <thead><tr><th>번호</th><th>세대</th><th>유형</th><th>하자 내용</th><th>사진</th><th>접수일</th><th>담당업체</th><th>방문예정일</th><th>처리상태</th><th>완료처리</th></tr></thead>
             <tbody>
-              {filteredData.map((d: any, i: number) => (
+              {filtered.map((d: any, i: number) => (
                 <tr key={i}>
-                  <td>{d.no}</td><td>{d.unit}</td><td>{d.type}</td><td>{d.content}</td><td>{d.photos}</td><td>{d.date}</td>
+                  <td>{d.no}</td><td>{d.unit}</td><td>{d.type}</td><td>{d.content}</td><td>{d.photos}</td><td>{d.dateDisplay}</td>
                   <td className={d.company === "미배정" ? "text-destructive font-medium" : ""}>{d.company}</td>
                   <td>{d.visitDate}</td>
                   <td><span className={`status-badge ${getDefectStatusBadge(d.status)}`}>{d.status}</span></td>

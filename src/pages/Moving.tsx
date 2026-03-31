@@ -1,7 +1,9 @@
+import { useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight, AlertCircle } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import AdvancedFilterBar, { FilterValues, applyCommonFilters } from "@/components/AdvancedFilterBar";
 
 const getCountColor = (count: number) => {
   if (count === 0) return "";
@@ -20,6 +22,7 @@ const Moving = () => {
   const [searchParams] = useSearchParams();
   const filterParam = searchParams.get("filter");
   const weekDays = ["일", "월", "화", "수", "목", "금", "토"];
+  const [filters, setFilters] = useState<FilterValues>({ search: "", dong: "전체", status: "전체" });
 
   const { data: movingSchedules = [], isLoading } = useQuery({
     queryKey: ["moving_schedules"],
@@ -29,15 +32,29 @@ const Moving = () => {
         .select("*, units(dong, ho)")
         .order("moving_date", { ascending: true });
       if (error) throw error;
-      return data;
+      return data.map((m: any) => ({
+        ...m,
+        dong: m.units?.dong || "",
+        unit: `${m.units?.dong}동 ${m.units?.ho}`,
+        date: m.moving_date,
+      }));
     },
+  });
+
+  const dongOptions = useMemo(() => [...new Set(movingSchedules.map((m: any) => m.dong))].filter(Boolean).sort(), [movingSchedules]);
+
+  const filtered = applyCommonFilters(movingSchedules, filters, {
+    searchFields: ["unit"],
+    statusField: "status",
+    dongField: "dong",
+    dateField: "date",
   });
 
   // Build calendar for April 2026
   const totalDays = 30;
-  const startDay = 3; // April 2026 starts on Wednesday
+  const startDay = 3;
   const dayCounts = new Map<number, number>();
-  movingSchedules.forEach((m: any) => {
+  filtered.forEach((m: any) => {
     const d = new Date(m.moving_date);
     if (d.getMonth() === 3 && d.getFullYear() === 2026) {
       const day = d.getDate();
@@ -46,8 +63,7 @@ const Moving = () => {
   });
 
   const calendarData = Array.from({ length: totalDays }, (_, i) => ({
-    day: i + 1,
-    count: dayCounts.get(i + 1) || 0,
+    day: i + 1, count: dayCounts.get(i + 1) || 0,
   }));
 
   const weeks: (typeof calendarData[0] | null)[][] = [];
@@ -61,10 +77,9 @@ const Moving = () => {
     weeks.push(currentWeek);
   }
 
-  // Today's moving (use all for demo)
   const todayStr = new Date().toISOString().slice(0, 10);
-  const todayMoving = movingSchedules
-    .filter((m: any) => m.moving_date === todayStr || movingSchedules.indexOf(m) < 5)
+  const todayMoving = filtered
+    .filter((m: any) => m.moving_date === todayStr || filtered.indexOf(m) < 5)
     .slice(0, 5);
 
   return (
@@ -77,9 +92,26 @@ const Moving = () => {
       {filterParam && (
         <div className="mb-4 p-3 bg-warning/10 border border-warning/30 rounded-lg flex items-center gap-2 text-sm text-warning">
           <AlertCircle className="w-4 h-4" />
-          <span>현재 필터: <strong>{filterParam}</strong> — 해당 조건의 세대를 확인하세요.</span>
+          <span>현재 필터: <strong>{filterParam}</strong></span>
         </div>
       )}
+
+      <AdvancedFilterBar
+        config={{
+          searchPlaceholder: "세대 검색",
+          dongOptions,
+          statusOptions: [
+            { label: "전체", value: "전체" },
+            { label: "예정", value: "예정" },
+            { label: "진행중", value: "진행중" },
+            { label: "완료", value: "완료" },
+          ],
+          statusLabel: "상태",
+          showDateRange: true,
+        }}
+        values={filters}
+        onChange={setFilters}
+      />
 
       {isLoading ? (
         <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>
@@ -127,7 +159,7 @@ const Moving = () => {
                 {todayMoving.map((m: any) => (
                   <tr key={m.id}>
                     <td>{m.time_slot}</td>
-                    <td>{m.units?.dong}동 {m.units?.ho}</td>
+                    <td>{m.unit}</td>
                     <td>{m.elevator || "—"}</td>
                     <td><span className={`status-badge ${getMovingStatus(m.status)}`}>{m.status}</span></td>
                   </tr>

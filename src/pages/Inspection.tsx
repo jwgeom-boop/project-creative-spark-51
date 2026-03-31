@@ -1,11 +1,16 @@
-import { Search, Download, Settings, Plus, AlertCircle } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Download, Settings, Plus, AlertCircle } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { exportToExcel } from "@/lib/exportExcel";
+import { toast } from "sonner";
+import AdvancedFilterBar, { FilterValues, applyCommonFilters } from "@/components/AdvancedFilterBar";
 
 const Inspection = () => {
   const [searchParams] = useSearchParams();
   const filterParam = searchParams.get("filter");
+  const [filters, setFilters] = useState<FilterValues>({ search: "", dong: "전체", status: "전체" });
 
   const { data: inspections = [], isLoading } = useQuery({
     queryKey: ["inspections"],
@@ -37,40 +42,50 @@ const Inspection = () => {
     },
   });
 
-  // Time slot summary
+  const dongOptions = useMemo(() => [...new Set(inspections.map((i: any) => i.units?.dong).filter(Boolean))].sort(), [inspections]);
+
+  // Enrich inspections for filtering
+  const enriched = useMemo(() => inspections.map((ins: any) => {
+    const resident = residents.find((r: any) => r.unit_id === ins.unit_id);
+    return {
+      ...ins,
+      dong: ins.units?.dong || "",
+      unit: `${ins.units?.dong}동 ${ins.units?.ho}`,
+      name: resident?.name || "—",
+      date: ins.inspection_date,
+    };
+  }), [inspections, residents]);
+
+  const filteredInspections = applyCommonFilters(enriched, filters, {
+    searchFields: ["unit", "name"],
+    statusField: "status",
+    dongField: "dong",
+    dateField: "date",
+  });
+
+  // Time slot summary from filtered
   const timeSlotMap = new Map<string, { total: number; checkedIn: number }>();
-  inspections.forEach((ins: any) => {
+  filteredInspections.forEach((ins: any) => {
     const slot = ins.time_slot;
     if (!timeSlotMap.has(slot)) timeSlotMap.set(slot, { total: 0, checkedIn: 0 });
     const entry = timeSlotMap.get(slot)!;
     entry.total++;
     if (ins.checkin_time) entry.checkedIn++;
   });
-
   const timeSlots = Array.from(timeSlotMap.entries()).map(([time, data]) => ({
     time, checkin: `${data.checkedIn}/${data.total}`, waiting: `${data.total - data.checkedIn}명`
   }));
 
-  // Waiting queue (non-checked-in or recently checked in)
-  const waitingQueue = inspections
+  const waitingQueue = filteredInspections
     .filter((ins: any) => ins.status !== "완료")
     .slice(0, 6)
-    .map((ins: any, i: number) => {
-      const resident = residents.find((r: any) => r.unit_id === ins.unit_id);
-      return {
-        no: `${i + 1}`,
-        unit: `${ins.units?.dong}동 ${ins.units?.ho}`,
-        name: resident?.name || "—",
-        status: ins.status,
-        checkin: ins.checkin_time ? new Date(ins.checkin_time).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }) : "—",
-      };
-    });
+    .map((ins: any, i: number) => ({
+      no: `${i + 1}`, unit: ins.unit, name: ins.name, status: ins.status,
+      checkin: ins.checkin_time ? new Date(ins.checkin_time).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }) : "—",
+    }));
 
-  // Defect type stats
   const defectTypeCount = new Map<string, number>();
-  defects.forEach((d: any) => {
-    defectTypeCount.set(d.defect_type, (defectTypeCount.get(d.defect_type) || 0) + 1);
-  });
+  defects.forEach((d: any) => defectTypeCount.set(d.defect_type, (defectTypeCount.get(d.defect_type) || 0) + 1));
   const totalDefects = defects.length || 1;
   const defectStats = Array.from(defectTypeCount.entries()).map(([type, count]) => ({
     type, ratio: Math.round((count / totalDefects) * 100),
@@ -87,22 +102,37 @@ const Inspection = () => {
       {filterParam && (
         <div className="mb-4 p-3 bg-warning/10 border border-warning/30 rounded-lg flex items-center gap-2 text-sm text-warning">
           <AlertCircle className="w-4 h-4" />
-          <span>현재 필터: <strong>{filterParam}</strong> — 해당 조건의 세대를 확인하세요.</span>
+          <span>현재 필터: <strong>{filterParam}</strong></span>
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        <input type="date" defaultValue="2026-03-31" className="px-3 py-2 border border-border rounded-md text-sm bg-card" />
-        <div className="flex gap-1">
-          {["1주", "1개월", "3개월"].map(p => (
-            <button key={p} className="px-3 py-1.5 text-xs border border-border rounded-md bg-card hover:bg-accent">{p}</button>
-          ))}
-        </div>
-        <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md">검 색</button>
+      <AdvancedFilterBar
+        config={{
+          searchPlaceholder: "세대 / 입주자명 검색",
+          dongOptions,
+          statusOptions: [
+            { label: "전체", value: "전체" },
+            { label: "대기중", value: "대기중" },
+            { label: "점검중", value: "점검중" },
+            { label: "완료", value: "완료" },
+          ],
+          statusLabel: "상태",
+          showDateRange: true,
+        }}
+        values={filters}
+        onChange={setFilters}
+      />
+
+      <div className="flex flex-wrap items-center gap-2 mb-4">
         <div className="ml-auto flex gap-2">
           <button className="px-3 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1"><Settings className="w-4 h-4" /> 예약 마감 설정</button>
           <button className="px-3 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1"><Plus className="w-4 h-4" /> 슬롯 추가</button>
-          <button className="px-3 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1"><Download className="w-4 h-4" /> 엑셀 출력</button>
+          <button className="px-3 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => {
+            exportToExcel(waitingQueue, [
+              { key: "no", label: "번호" }, { key: "unit", label: "세대" }, { key: "name", label: "입주자명" }, { key: "status", label: "상태" },
+            ], "사전점검");
+            toast.success("엑셀 파일이 다운로드되었습니다.");
+          }}><Download className="w-4 h-4" /> 엑셀 출력</button>
         </div>
       </div>
 
@@ -130,9 +160,7 @@ const Inspection = () => {
               <tbody>
                 {waitingQueue.map((q, i) => (
                   <tr key={i}>
-                    <td className="font-medium">{q.no}</td>
-                    <td>{q.unit}</td>
-                    <td>{q.name}</td>
+                    <td className="font-medium">{q.no}</td><td>{q.unit}</td><td>{q.name}</td>
                     <td><span className={`status-badge ${q.status === "점검중" ? "status-pending" : q.status === "대기중" ? "status-info" : "status-error"}`}>{q.status}</span></td>
                   </tr>
                 ))}
