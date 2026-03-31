@@ -1,4 +1,6 @@
 import { Search, Send, Download, FileText } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
 
 const agreementStats = [
   { name: "주차장 이용 동의서", signed: 278, total: 300, percent: 93 },
@@ -16,7 +18,38 @@ const signingData = [
   { unit: "103동 1503", name: "최수연", parking: true, noise: true, community: true, privacy: true, common: true, date: "03.27" },
 ];
 
+const signFilterOptions = ["전체", "미서명", "완료", "일부"];
+
+const isFullySigned = (s: typeof signingData[0]) => s.parking && s.noise && s.community && s.privacy && s.common;
+const isUnsigned = (s: typeof signingData[0]) => !s.parking && !s.noise && !s.community && !s.privacy && !s.common;
+
 const Agreements = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterParam = searchParams.get("filter") || "전체";
+  const [signFilter, setSignFilter] = useState(filterParam);
+
+  useEffect(() => {
+    setSignFilter(filterParam);
+  }, [filterParam]);
+
+  const handleFilterChange = (value: string) => {
+    setSignFilter(value);
+    if (value === "전체") {
+      searchParams.delete("filter");
+    } else {
+      searchParams.set("filter", value);
+    }
+    setSearchParams(searchParams, { replace: true });
+  };
+
+  const filteredData = signingData.filter((s) => {
+    if (signFilter === "전체") return true;
+    if (signFilter === "완료") return isFullySigned(s);
+    if (signFilter === "미서명") return !isFullySigned(s);
+    if (signFilter === "일부") return !isFullySigned(s) && !isUnsigned(s);
+    return true;
+  });
+
   return (
     <div>
       <div className="page-header">
