@@ -71,9 +71,11 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                     onMouseEnter={() => setOpenDropdown(item.label)}
                     onMouseLeave={() => setOpenDropdown(null)}
                   >
-                    <button className={`px-3 py-2 text-sm whitespace-nowrap rounded-md transition-colors flex items-center gap-1 ${
-                      active ? "text-primary font-semibold border-b-2 border-primary" : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                    }`}>
+                    <button 
+                      onClick={() => setOpenDropdown(openDropdown === item.label ? null : item.label)}
+                      className={`px-3 py-2 text-sm whitespace-nowrap rounded-md transition-colors flex items-center gap-1 ${
+                        active ? "text-primary font-semibold border-b-2 border-primary" : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                      }`}>
                       {item.label}
                       <ChevronDown className="w-3 h-3" />
                     </button>
