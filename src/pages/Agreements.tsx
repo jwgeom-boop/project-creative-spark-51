@@ -94,7 +94,7 @@ const Agreements = () => {
             <tr><th>세대</th><th>입주자</th><th>주차장</th><th>층간소음</th><th>커뮤니티</th><th>개인정보</th><th>공동규약</th><th>서명일시</th><th>미서명 알림</th></tr>
           </thead>
           <tbody>
-            {signingData.map((s, i) => (
+            {filteredData.map((s, i) => (
               <tr key={i}>
                 <td>{s.unit}</td>
                 <td className="font-medium">{s.name}</td>

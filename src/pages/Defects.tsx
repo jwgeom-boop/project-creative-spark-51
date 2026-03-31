@@ -94,7 +94,7 @@ const Defects = () => {
             <tr><th>번호</th><th>세대</th><th>유형</th><th>하자 내용</th><th>사진</th><th>접수일</th><th>담당업체</th><th>방문예정일</th><th>처리상태</th><th>완료처리</th></tr>
           </thead>
           <tbody>
-            {defectData.map((d, i) => (
+            {filteredData.map((d, i) => (
               <tr key={i}>
                 <td>{d.no}</td>
                 <td>{d.unit}</td>

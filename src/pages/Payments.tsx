@@ -98,7 +98,7 @@ const Payments = () => {
             </tr>
           </thead>
           <tbody>
-            {paymentData.map((p, i) => (
+            {filteredData.map((p, i) => (
               <tr key={i}>
                 <td>{p.unit}</td>
                 <td className="font-medium">{p.name}</td>

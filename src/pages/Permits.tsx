@@ -113,7 +113,7 @@ const Permits = () => {
             <tr><th>세대</th><th>입주자</th><th>잔금납부</th><th>납부확인</th><th>승인일시</th><th>발급상태</th><th>유효기간</th><th>QR</th><th>관리</th></tr>
           </thead>
           <tbody>
-            {permitData.map((p, i) => (
+            {filteredData.map((p, i) => (
               <tr key={i}>
                 <td>{p.unit}</td>
                 <td className="font-medium">{p.name}</td>
