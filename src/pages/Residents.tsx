@@ -19,6 +19,7 @@ const Residents = () => {
   const [selectedUnit, setSelectedUnit] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [filters, setFilters] = useState<FilterValues>({ search: "", dong: "전체", status: "전체" });
+  const [page, setPage] = useState(1);
 
   const { data: residents = [], isLoading } = useQuery({
     queryKey: ["residents"],
