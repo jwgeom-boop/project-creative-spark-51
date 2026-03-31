@@ -108,7 +108,7 @@ const Defects = () => {
                 <td><span className={`status-badge ${getDefectStatusBadge(d.status)}`}>{d.status}</span></td>
                 <td>
                   {d.status === "미배정" ? (
-                    <button className="text-primary text-sm hover:underline">배정</button>
+                    <button className="text-primary text-sm hover:underline" onClick={() => toast.success("업체가 배정되었습니다.")}>배정</button>
                   ) : d.status === "완료" ? (
                     <span className="text-success text-sm">완료✓</span>
                   ) : "—"}
