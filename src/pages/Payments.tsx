@@ -129,6 +129,7 @@ const Payments = () => {
           </table>
         )}
       </div>
+      <TablePagination currentPage={page} totalItems={filtered.length} onPageChange={(p) => setPage(p)} />
     </div>
   );
 };

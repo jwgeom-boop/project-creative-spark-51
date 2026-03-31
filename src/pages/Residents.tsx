@@ -128,6 +128,7 @@ const Residents = () => {
           </table>
         )}
       </div>
+      <TablePagination currentPage={page} totalItems={filtered.length} onPageChange={(p) => setPage(p)} />
 
       <UnitDetailDialog open={dialogOpen} onOpenChange={setDialogOpen} unit={selectedUnit} />
     </div>

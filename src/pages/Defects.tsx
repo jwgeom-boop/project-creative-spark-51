@@ -131,6 +131,7 @@ const Defects = () => {
           </table>
         )}
       </div>
+      <TablePagination currentPage={page} totalItems={filtered.length} onPageChange={(p) => setPage(p)} />
 
       <div className="mt-4 bg-card rounded-lg border border-border p-4">
         <h3 className="text-sm font-semibold mb-2">법정 하자보수 기간 자동 관리</h3>
