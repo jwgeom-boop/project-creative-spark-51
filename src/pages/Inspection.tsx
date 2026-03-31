@@ -33,6 +33,13 @@ const Inspection = () => {
         <p className="page-description">날짜·시간대별 예약 현황 · 실시간 대기열 모니터링</p>
       </div>
 
+      {filterParam && (
+        <div className="mb-4 p-3 bg-warning/10 border border-warning/30 rounded-lg flex items-center gap-2 text-sm text-warning">
+          <AlertCircle className="w-4 h-4" />
+          <span>현재 필터: <strong>{filterParam}</strong> — 해당 조건의 세대를 확인하세요.</span>
+        </div>
+      )}
+
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <input type="date" defaultValue="2026-03-31" className="px-3 py-2 border border-border rounded-md text-sm bg-card" />
