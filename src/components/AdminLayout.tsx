@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { Building2, Users, ClipboardCheck, Truck, CreditCard, Bell, Wrench, MessageSquare, Settings, LayoutDashboard, ChevronDown } from "lucide-react";
+import { Building2, Users, ClipboardCheck, Truck, CreditCard, Bell, Wrench, MessageSquare, Settings, LayoutDashboard, ChevronDown, Menu, X } from "lucide-react";
 
 interface NavItem {
   label: string;
@@ -40,11 +40,18 @@ const navItems: NavItem[] = [
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileExpandedItem, setMobileExpandedItem] = useState<string | null>(null);
 
   const isActiveParent = (item: NavItem) => {
     if (location.pathname === item.path) return true;
     if (item.children) return item.children.some(c => location.pathname === c.path);
     return false;
+  };
+
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false);
+    setMobileExpandedItem(null);
   };
 
   return (
@@ -60,8 +67,8 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             <span className="font-bold text-foreground text-sm">입주ON 관리자</span>
           </div>
 
-          {/* Nav Items */}
-          <nav className="flex items-center gap-1 overflow-x-auto">
+          {/* Desktop Nav Items */}
+          <nav className="hidden lg:flex items-center gap-1 overflow-x-auto">
             {navItems.map((item) => {
               const active = isActiveParent(item);
 
@@ -108,8 +115,13 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             })}
           </nav>
 
-          {/* User Info */}
-          <div className="ml-auto flex items-center gap-3 shrink-0">
+          {/* Mobile hamburger */}
+          <button className="lg:hidden ml-auto mr-3 p-2 rounded-md hover:bg-accent" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+            {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+
+          {/* User Info - desktop */}
+          <div className="hidden lg:flex ml-auto items-center gap-3 shrink-0">
             <div className="text-right">
               <div className="text-xs font-medium text-foreground">홍길동 담당</div>
               <div className="text-xs text-muted-foreground">○○건설 101</div>
@@ -118,11 +130,83 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               <span className="text-primary-foreground text-xs font-bold">홍</span>
             </div>
           </div>
+
+          {/* User Info - mobile (avatar only) */}
+          <div className="lg:hidden flex items-center shrink-0">
+            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+              <span className="text-primary-foreground text-xs font-bold">홍</span>
+            </div>
+          </div>
         </div>
+
+        {/* Mobile Menu Overlay */}
+        {mobileMenuOpen && (
+          <div className="lg:hidden border-t border-border bg-card max-h-[calc(100vh-3.5rem)] overflow-y-auto">
+            <nav className="py-2">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const active = isActiveParent(item);
+
+                if (item.children) {
+                  const expanded = mobileExpandedItem === item.label;
+                  return (
+                    <div key={item.path}>
+                      <button
+                        onClick={() => setMobileExpandedItem(expanded ? null : item.label)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors ${
+                          active ? "text-primary font-semibold bg-primary/5" : "text-foreground hover:bg-accent"
+                        }`}
+                      >
+                        <Icon className="w-4 h-4 shrink-0" />
+                        <span className="flex-1 text-left">{item.label}</span>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${expanded ? "rotate-180" : ""}`} />
+                      </button>
+                      {expanded && (
+                        <div className="bg-accent/30">
+                          {item.children.map(child => (
+                            <NavLink key={child.path} to={child.path}
+                              onClick={closeMobileMenu}
+                              className={`block pl-11 pr-4 py-2.5 text-sm transition-colors ${
+                                location.pathname === child.path ? "text-primary font-medium bg-primary/5" : "text-muted-foreground hover:text-foreground"
+                              }`}>
+                              {child.label}
+                            </NavLink>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+
+                return (
+                  <NavLink key={item.path} to={item.path}
+                    onClick={closeMobileMenu}
+                    className={`flex items-center gap-3 px-4 py-3 text-sm transition-colors ${
+                      active ? "text-primary font-semibold bg-primary/5" : "text-foreground hover:bg-accent"
+                    }`}>
+                    <Icon className="w-4 h-4 shrink-0" />
+                    {item.label}
+                  </NavLink>
+                );
+              })}
+            </nav>
+
+            {/* Mobile user info */}
+            <div className="border-t border-border px-4 py-3 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                <span className="text-primary-foreground text-xs font-bold">홍</span>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-foreground">홍길동 담당</div>
+                <div className="text-xs text-muted-foreground">○○건설 101</div>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Page Content */}
-      <main className="p-6">
+      <main className="p-4 lg:p-6">
         {children}
       </main>
     </div>
