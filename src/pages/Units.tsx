@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Search, Download } from "lucide-react";
+import UnitDetailDialog from "@/components/UnitDetailDialog";
 
 const unitData = [
   { dong: "101동", ho: "0101호", area: "84㎡", name: "홍길동", phone: "010-1234-5678", status: "입주완료", payment: "납부완료", permit: "발급완료", moving: "완료" },
@@ -16,6 +17,14 @@ const getStatusBadge = (value: string) => {
 };
 
 const Units = () => {
+  const [selectedUnit, setSelectedUnit] = useState<typeof unitData[0] | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const handleRowClick = (unit: typeof unitData[0]) => {
+    setSelectedUnit(unit);
+    setDialogOpen(true);
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -23,7 +32,6 @@ const Units = () => {
         <p className="page-description">동·호수별 입주자 배정 현황 및 상태 관리</p>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <select className="px-3 py-2 border border-border rounded-md text-sm bg-card">
           <option>동 선택: 전체</option>
@@ -42,7 +50,6 @@ const Units = () => {
         </button>
       </div>
 
-      {/* Table */}
       <div className="bg-card rounded-lg border border-border overflow-x-auto">
         <table className="data-table">
           <thead>
@@ -54,10 +61,10 @@ const Units = () => {
           </thead>
           <tbody>
             {unitData.map((u, i) => (
-              <tr key={i} className="cursor-pointer">
-                <td><input type="checkbox" className="rounded" /></td>
+              <tr key={i} className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => handleRowClick(u)}>
+                <td onClick={(e) => e.stopPropagation()}><input type="checkbox" className="rounded" /></td>
                 <td>{u.dong}</td><td>{u.ho}</td><td>{u.area}</td>
-                <td className="font-medium">{u.name}</td><td>{u.phone}</td>
+                <td className="font-medium text-primary">{u.name}</td><td>{u.phone}</td>
                 <td><span className={`status-badge ${getStatusBadge(u.status)}`}>{u.status}</span></td>
                 <td><span className={`status-badge ${getStatusBadge(u.payment)}`}>{u.payment}</span></td>
                 <td><span className={`status-badge ${getStatusBadge(u.permit)}`}>{u.permit}</span></td>
@@ -70,6 +77,8 @@ const Units = () => {
           총 300세대 중 5건 표시 | 1 / 60 페이지
         </div>
       </div>
+
+      <UnitDetailDialog open={dialogOpen} onOpenChange={setDialogOpen} unit={selectedUnit} />
     </div>
   );
 };
