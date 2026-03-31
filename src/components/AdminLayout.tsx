@@ -82,14 +82,15 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
                     onMouseEnter={() => setOpenDropdown(item.label)}
                     onMouseLeave={() => setOpenDropdown(null)}
                   >
-                    <button 
-                      onClick={() => setOpenDropdown(openDropdown === item.label ? null : item.label)}
+                    <NavLink
+                      to={item.path}
+                      onClick={() => setOpenDropdown(null)}
                       className={`px-3 py-2 text-sm whitespace-nowrap rounded-md transition-colors flex items-center gap-1 ${
                         active ? "text-primary font-semibold border-b-2 border-primary" : "text-muted-foreground hover:text-foreground hover:bg-accent"
                       }`}>
                       {item.label}
-                      <ChevronDown className="w-3 h-3" />
-                    </button>
+                      <ChevronDown className={`w-3 h-3 transition-transform ${openDropdown === item.label ? "rotate-180" : ""}`} />
+                    </NavLink>
 
                     {openDropdown === item.label && (
                       <div className="absolute top-full right-0 lg:left-0 lg:right-auto mt-0 bg-card border border-border rounded-md shadow-lg py-1 min-w-[160px] z-50"
