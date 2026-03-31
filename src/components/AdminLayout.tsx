@@ -72,7 +72,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           </div>
 
           {/* Desktop Nav Items */}
-          <nav className="hidden lg:flex items-center gap-1 overflow-x-auto">
+          <nav className="hidden lg:flex items-center gap-1 flex-wrap">
             {navItems.map((item) => {
               const active = isActiveParent(item);
 
