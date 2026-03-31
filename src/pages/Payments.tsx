@@ -21,6 +21,7 @@ const Payments = () => {
   const [filters, setFilters] = useState<FilterValues>({
     search: "", dong: "전체", status: searchParams.get("filter") || "전체",
   });
+  const [page, setPage] = useState(1);
 
   const { data: payments = [], isLoading } = useQuery({
     queryKey: ["payments"],
