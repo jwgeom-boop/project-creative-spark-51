@@ -1,4 +1,6 @@
 import { Search, Download, QrCode, CreditCard } from "lucide-react";
+import { useState } from "react";
+import UnitDetailDialog from "@/components/UnitDetailDialog";
 
 const residentData = [
   { unit: "101동 0101", name: "홍길동", phone: "010-1234-5678", car: "12가3456", qr: "발급완료", permit: "발급완료", payment: "납부완료", inspection: "완료", movingDate: "03.15" },
@@ -12,6 +14,16 @@ const getStatusBadge = (value: string) => {
   if (["예약완료"].includes(value)) return "status-pending";
   if (value === "—") return "";
   return "status-error";
+};
+
+const toUnitData = (r: typeof residentData[0]) => {
+  const [dong, ho] = r.unit.split(" ");
+  return {
+    dong, ho, area: "84㎡", name: r.name, phone: r.phone,
+    status: r.inspection === "완료" ? "입주완료" : "입주예정",
+    payment: r.payment, permit: r.permit,
+    moving: r.movingDate !== "—" ? "예약완료" : "미예약",
+  };
 };
 
 const Residents = () => {
