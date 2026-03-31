@@ -1,16 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Download } from "lucide-react";
 import { toast } from "sonner";
 import UnitDetailDialog from "@/components/UnitDetailDialog";
 import { useSearchParams } from "react-router-dom";
-
-const unitData = [
-  { dong: "101동", ho: "0101호", area: "84㎡", name: "홍길동", phone: "010-1234-5678", status: "입주완료", payment: "납부완료", permit: "발급완료", moving: "완료" },
-  { dong: "101동", ho: "0102호", area: "59㎡", name: "김철수", phone: "010-9876-5432", status: "입주예정", payment: "미납", permit: "미발급", moving: "예약완료" },
-  { dong: "101동", ho: "0201호", area: "84㎡", name: "이영희", phone: "010-1111-2222", status: "사검완료", payment: "납부완료", permit: "미발급", moving: "미예약" },
-  { dong: "102동", ho: "0301호", area: "114㎡", name: "박민준", phone: "010-3333-4444", status: "입주완료", payment: "납부완료", permit: "발급완료", moving: "완료" },
-  { dong: "102동", ho: "0302호", area: "84㎡", name: "최수연", phone: "010-5555-6666", status: "미입주", payment: "미납", permit: "미발급", moving: "미예약" },
-];
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 const getStatusBadge = (value: string) => {
   if (["입주완료", "납부완료", "발급완료", "완료"].includes(value)) return "status-complete";
@@ -19,27 +13,45 @@ const getStatusBadge = (value: string) => {
 };
 
 const Units = () => {
-  const [selectedUnit, setSelectedUnit] = useState<typeof unitData[0] | null>(null);
+  const [searchParams] = useSearchParams();
+  const [selectedUnit, setSelectedUnit] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [dongFilter, setDongFilter] = useState("전체");
-  const [statusFilter, setStatusFilter] = useState("전체");
+  const [statusFilter, setStatusFilter] = useState(searchParams.get("filter") || "전체");
 
-  const handleRowClick = (unit: typeof unitData[0]) => {
-    setSelectedUnit(unit);
-    setDialogOpen(true);
-  };
+  const { data: units = [], isLoading } = useQuery({
+    queryKey: ["units"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("units")
+        .select("*, residents(name, phone)")
+        .order("dong")
+        .order("ho");
+      if (error) throw error;
+      return data.map((u: any) => ({
+        dong: u.dong, ho: u.ho, area: u.area,
+        name: u.residents?.[0]?.name || "—",
+        phone: u.residents?.[0]?.phone || "—",
+        status: u.status, payment: u.payment_status,
+        permit: u.permit_status, moving: u.moving_status,
+      }));
+    },
+  });
 
-  const handleExcelDownload = () => {
-    toast.success("엑셀 파일이 다운로드되었습니다.");
-  };
+  const dongs = [...new Set(units.map((u: any) => u.dong))];
 
-  const filtered = unitData.filter(u => {
+  const filtered = units.filter((u: any) => {
     if (dongFilter !== "전체" && u.dong !== dongFilter) return false;
     if (statusFilter !== "전체" && u.status !== statusFilter) return false;
     if (search && !u.name.includes(search) && !u.dong.includes(search) && !u.ho.includes(search)) return false;
     return true;
   });
+
+  const handleRowClick = (unit: any) => {
+    setSelectedUnit(unit);
+    setDialogOpen(true);
+  };
 
   return (
     <div>
@@ -51,7 +63,7 @@ const Units = () => {
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <select className="px-3 py-2 border border-border rounded-md text-sm bg-card" value={dongFilter} onChange={(e) => setDongFilter(e.target.value)}>
           <option value="전체">동 선택: 전체</option>
-          <option value="101동">101동</option><option value="102동">102동</option><option value="103동">103동</option>
+          {dongs.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
         <select className="px-3 py-2 border border-border rounded-md text-sm bg-card" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="전체">입주상태: 전체</option>
@@ -61,37 +73,41 @@ const Units = () => {
           <input type="text" placeholder="세대·이름 검색" value={search} onChange={(e) => setSearch(e.target.value)} className="px-3 py-2 text-sm bg-transparent outline-none" />
           <button className="px-3 py-2 text-muted-foreground"><Search className="w-4 h-4" /></button>
         </div>
-        <button className="ml-auto px-4 py-2 text-sm border border-border rounded-md bg-card hover:bg-accent flex items-center gap-1" onClick={handleExcelDownload}>
+        <button className="ml-auto px-4 py-2 text-sm border border-border rounded-md bg-card hover:bg-accent flex items-center gap-1" onClick={() => toast.success("엑셀 파일이 다운로드되었습니다.")}>
           <Download className="w-4 h-4" /> 엑셀 다운로드
         </button>
       </div>
 
       <div className="bg-card rounded-lg border border-border overflow-x-auto">
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th><input type="checkbox" className="rounded" /></th>
-              <th>동</th><th>호수</th><th>전용면적</th><th>입주자명</th><th>연락처</th>
-              <th>입주상태</th><th>잔금납부</th><th>입주증</th><th>이사예약</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((u, i) => (
-              <tr key={i} className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => handleRowClick(u)}>
-                <td onClick={(e) => e.stopPropagation()}><input type="checkbox" className="rounded" /></td>
-                <td>{u.dong}</td><td>{u.ho}</td><td>{u.area}</td>
-                <td className="font-medium text-primary">{u.name}</td><td>{u.phone}</td>
-                <td><span className={`status-badge ${getStatusBadge(u.status)}`}>{u.status}</span></td>
-                <td><span className={`status-badge ${getStatusBadge(u.payment)}`}>{u.payment}</span></td>
-                <td><span className={`status-badge ${getStatusBadge(u.permit)}`}>{u.permit}</span></td>
-                <td><span className={`status-badge ${getStatusBadge(u.moving)}`}>{u.moving}</span></td>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" /></div>
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th><input type="checkbox" className="rounded" /></th>
+                <th>동</th><th>호수</th><th>전용면적</th><th>입주자명</th><th>연락처</th>
+                <th>입주상태</th><th>잔금납부</th><th>입주증</th><th>이사예약</th>
               </tr>
-            ))}
-            {filtered.length === 0 && <tr><td colSpan={10} className="text-center py-6 text-muted-foreground">검색 결과가 없습니다.</td></tr>}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filtered.map((u: any, i: number) => (
+                <tr key={i} className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => handleRowClick(u)}>
+                  <td onClick={(e) => e.stopPropagation()}><input type="checkbox" className="rounded" /></td>
+                  <td>{u.dong}</td><td>{u.ho}</td><td>{u.area}</td>
+                  <td className="font-medium text-primary">{u.name}</td><td>{u.phone}</td>
+                  <td><span className={`status-badge ${getStatusBadge(u.status)}`}>{u.status}</span></td>
+                  <td><span className={`status-badge ${getStatusBadge(u.payment)}`}>{u.payment}</span></td>
+                  <td><span className={`status-badge ${getStatusBadge(u.permit)}`}>{u.permit}</span></td>
+                  <td><span className={`status-badge ${getStatusBadge(u.moving)}`}>{u.moving}</span></td>
+                </tr>
+              ))}
+              {filtered.length === 0 && <tr><td colSpan={10} className="text-center py-6 text-muted-foreground">검색 결과가 없습니다.</td></tr>}
+            </tbody>
+          </table>
+        )}
         <div className="px-4 py-3 text-sm text-muted-foreground border-t border-border">
-          총 300세대 중 {filtered.length}건 표시 | 1 / 60 페이지
+          총 {units.length}세대 중 {filtered.length}건 표시
         </div>
       </div>
 

@@ -1,47 +1,69 @@
 import { useNavigate } from "react-router-dom";
-
-const kpiData = [
-  { label: "입주 완료율", value: "68", unit: "%", color: "border-t-kpi-blue" },
-  { label: "사검 완료율", value: "82", unit: "%", color: "border-t-kpi-green" },
-  { label: "잔금 미납", value: "14", unit: "세대", color: "border-t-kpi-red" },
-  { label: "하자 미처리", value: "37", unit: "건", color: "border-t-kpi-orange" },
-  { label: "오늘 방문자", value: "48", unit: "명", color: "border-t-kpi-purple" },
-  { label: "이사 예약", value: "12", unit: "세대", color: "border-t-kpi-teal" },
-  { label: "동의서 미서명", value: "23", unit: "세대", color: "border-t-kpi-yellow" },
-];
-
-const quickActions = [
-  { label: "안내문 발송", path: "/notices" },
-  { label: "입주증 승인", path: "/permits" },
-  { label: "하자 배정", path: "/defects" },
-  { label: "연체 알림 발송", path: "/payments" },
-  { label: "공지 등록", path: "/announcements" },
-  { label: "사검 예약 확인", path: "/inspection" },
-];
-
-const incompleteUnits = [
-  { label: "잔금 미납", value: "14세대", color: "text-destructive", path: "/payments?filter=미납" },
-  { label: "동의서 미서명", value: "23세대", color: "text-warning", path: "/agreements?filter=미서명" },
-  { label: "사검 미예약", value: "8세대", color: "text-destructive", path: "/inspection?filter=미예약" },
-  { label: "하자 미처리", value: "37건", color: "text-warning", path: "/defects?filter=미처리" },
-  { label: "이사 미예약", value: "18세대", color: "text-kpi-orange", path: "/moving?filter=미예약" },
-  { label: "입주증 미발급", value: "5세대", color: "text-success", path: "/permits?filter=미발급" },
-];
-
-const recentDefects = [
-  { no: 1, unit: "101동 1503", type: "하자", content: "욕실 타일 들뜸", company: "(주)하자보수", date: "03.30", status: "처리중", statusColor: "status-pending" },
-  { no: 2, unit: "102동 0804", type: "민원", content: "잔금 계좌 문의", company: "—", date: "03.30", status: "미처리", statusColor: "status-error" },
-  { no: 3, unit: "103동 1201", type: "하자", content: "현관문 잠금 오작동", company: "(주)하자보수", date: "03.29", status: "완료", statusColor: "status-complete" },
-];
-
-const recentNotices = [
-  { date: "03.30", title: "잔금 납부 기한 안내", rate: "74%" },
-  { date: "03.28", title: "사전점검 일정 안내", rate: "91%" },
-  { date: "03.25", title: "이사 차량 등록 안내", rate: "83%" },
-];
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+
+  const { data: units = [] } = useQuery({
+    queryKey: ["dashboard-units"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("units").select("status, payment_status, permit_status, moving_status");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: defects = [] } = useQuery({
+    queryKey: ["dashboard-defects"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("defects").select("status");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: notices = [] } = useQuery({
+    queryKey: ["dashboard-notices"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("notices").select("*").order("sent_date", { ascending: false }).limit(3);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const totalUnits = units.length;
+  const moveInComplete = units.filter((u: any) => u.status === "입주완료").length;
+  const inspComplete = units.filter((u: any) => ["입주완료", "사검완료"].includes(u.status)).length;
+  const unpaid = units.filter((u: any) => u.payment_status === "미납").length;
+  const unprocessedDefects = defects.filter((d: any) => d.status !== "완료").length;
+  const noPermit = units.filter((u: any) => u.permit_status === "미발급").length;
+  const noMoving = units.filter((u: any) => u.moving_status === "미예약").length;
+
+  const kpiData = [
+    { label: "입주 완료율", value: totalUnits ? Math.round((moveInComplete / totalUnits) * 100) : 0, unit: "%", color: "border-t-kpi-blue" },
+    { label: "사검 완료율", value: totalUnits ? Math.round((inspComplete / totalUnits) * 100) : 0, unit: "%", color: "border-t-kpi-green" },
+    { label: "잔금 미납", value: unpaid, unit: "세대", color: "border-t-kpi-red" },
+    { label: "하자 미처리", value: unprocessedDefects, unit: "건", color: "border-t-kpi-orange" },
+    { label: "입주증 미발급", value: noPermit, unit: "세대", color: "border-t-kpi-purple" },
+    { label: "이사 미예약", value: noMoving, unit: "세대", color: "border-t-kpi-teal" },
+  ];
+
+  const quickActions = [
+    { label: "안내문 발송", path: "/notices" },
+    { label: "입주증 승인", path: "/permits" },
+    { label: "하자 배정", path: "/defects" },
+    { label: "연체 알림 발송", path: "/payments" },
+    { label: "공지 등록", path: "/announcements" },
+    { label: "사검 예약 확인", path: "/inspection" },
+  ];
+
+  const incompleteUnits = [
+    { label: "잔금 미납", value: `${unpaid}세대`, color: "text-destructive", path: "/payments?filter=미납" },
+    { label: "하자 미처리", value: `${unprocessedDefects}건`, color: "text-warning", path: "/defects?filter=미처리" },
+    { label: "이사 미예약", value: `${noMoving}세대`, color: "text-kpi-orange", path: "/moving?filter=미예약" },
+    { label: "입주증 미발급", value: `${noPermit}세대`, color: "text-success", path: "/permits?filter=미발급" },
+  ];
 
   return (
     <div>
@@ -50,8 +72,7 @@ const Dashboard = () => {
         <p className="page-description">입주 현황을 한눈에 — 실시간 KPI · 미완료 세대 · 퀵 업무 실행</p>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
         {kpiData.map((kpi) => (
           <div key={kpi.label} className={`kpi-card border-t-4 ${kpi.color}`}>
             <div className="text-xs text-muted-foreground mb-2">{kpi.label}</div>
@@ -63,28 +84,20 @@ const Dashboard = () => {
         ))}
       </div>
 
-      {/* Quick Actions */}
       <div className="mb-6">
         <h2 className="text-sm font-semibold text-foreground mb-3">퀵 업무 실행</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
           {quickActions.map((action) => (
-            <button key={action.label} className="quick-action-btn" onClick={() => navigate(action.path)}>
-              {action.label}
-            </button>
+            <button key={action.label} className="quick-action-btn" onClick={() => navigate(action.path)}>{action.label}</button>
           ))}
         </div>
       </div>
 
-      {/* Incomplete Units */}
       <div className="mb-6">
         <h2 className="text-sm font-semibold text-foreground mb-3">미완료 세대 즉시 확인</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {incompleteUnits.map((item) => (
-            <div
-              key={item.label}
-              className="kpi-card cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all"
-              onClick={() => navigate(item.path)}
-            >
+            <div key={item.label} className="kpi-card cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all" onClick={() => navigate(item.path)}>
               <div className={`text-xs font-medium mb-1 ${item.color}`}>{item.label}</div>
               <div className={`text-2xl font-bold ${item.color}`}>{item.value}</div>
             </div>
@@ -92,7 +105,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Bottom Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-card rounded-lg border border-border overflow-hidden">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
@@ -100,23 +112,11 @@ const Dashboard = () => {
             <button className="text-xs text-primary hover:underline" onClick={() => navigate("/defects")}>전체보기 →</button>
           </div>
           <table className="data-table">
-            <thead>
-              <tr>
-                <th>번호</th><th>세대</th><th>유형</th><th>내용</th><th>담당업체</th><th>접수일</th><th>상태</th>
-              </tr>
-            </thead>
+            <thead><tr><th>세대</th><th>유형</th><th>내용</th><th>상태</th></tr></thead>
             <tbody>
-              {recentDefects.map((item) => (
-                <tr key={item.no} className="cursor-pointer hover:bg-accent/50" onClick={() => navigate("/defects")}>
-                  <td>{item.no}</td>
-                  <td>{item.unit}</td>
-                  <td>{item.type}</td>
-                  <td>{item.content}</td>
-                  <td>{item.company}</td>
-                  <td>{item.date}</td>
-                  <td><span className={`status-badge ${item.statusColor}`}>{item.status}</span></td>
-                </tr>
-              ))}
+              {defects.length === 0 ? (
+                <tr><td colSpan={4} className="text-center py-4 text-muted-foreground">데이터 로딩 중...</td></tr>
+              ) : null}
             </tbody>
           </table>
         </div>
@@ -127,17 +127,13 @@ const Dashboard = () => {
             <button className="text-xs text-primary hover:underline" onClick={() => navigate("/notices")}>전체보기 →</button>
           </div>
           <table className="data-table">
-            <thead>
-              <tr>
-                <th>발송일</th><th>제목</th><th>열람율</th>
-              </tr>
-            </thead>
+            <thead><tr><th>발송일</th><th>제목</th><th>열람율</th></tr></thead>
             <tbody>
-              {recentNotices.map((item, i) => (
+              {notices.map((n: any, i: number) => (
                 <tr key={i} className="cursor-pointer hover:bg-accent/50" onClick={() => navigate("/notices")}>
-                  <td>{item.date}</td>
-                  <td>{item.title}</td>
-                  <td>{item.rate}</td>
+                  <td>{n.sent_date ? new Date(n.sent_date).toLocaleDateString("ko-KR", { month: "2-digit", day: "2-digit" }) : "—"}</td>
+                  <td>{n.title}</td>
+                  <td>{n.read_rate}%</td>
                 </tr>
               ))}
             </tbody>
