@@ -1,4 +1,6 @@
 import { Search, Download, QrCode, CreditCard } from "lucide-react";
+import { useState } from "react";
+import UnitDetailDialog from "@/components/UnitDetailDialog";
 
 const residentData = [
   { unit: "101동 0101", name: "홍길동", phone: "010-1234-5678", car: "12가3456", qr: "발급완료", permit: "발급완료", payment: "납부완료", inspection: "완료", movingDate: "03.15" },
@@ -14,7 +16,25 @@ const getStatusBadge = (value: string) => {
   return "status-error";
 };
 
+const toUnitData = (r: typeof residentData[0]) => {
+  const [dong, ho] = r.unit.split(" ");
+  return {
+    dong, ho, area: "84㎡", name: r.name, phone: r.phone,
+    status: r.inspection === "완료" ? "입주완료" : "입주예정",
+    payment: r.payment, permit: r.permit,
+    moving: r.movingDate !== "—" ? "예약완료" : "미예약",
+  };
+};
+
 const Residents = () => {
+  const [selectedUnit, setSelectedUnit] = useState<ReturnType<typeof toUnitData> | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const handleRowClick = (r: typeof residentData[0]) => {
+    setSelectedUnit(toUnitData(r));
+    setDialogOpen(true);
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -43,13 +63,13 @@ const Residents = () => {
             <tr>
               <th><input type="checkbox" /></th>
               <th>세대</th><th>입주자명</th><th>연락처</th><th>차량번호</th>
-              <th>QR상태</th><th>입주증</th><th>잔금</th><th>사검예약</th><th>이사일</th><th>관리</th>
+              <th>QR상태</th><th>입주증</th><th>잔금</th><th>사검예약</th><th>이사일</th>
             </tr>
           </thead>
           <tbody>
             {residentData.map((r, i) => (
-              <tr key={i}>
-                <td><input type="checkbox" /></td>
+              <tr key={i} className="cursor-pointer hover:bg-accent/50" onClick={() => handleRowClick(r)}>
+                <td onClick={(e) => e.stopPropagation()}><input type="checkbox" /></td>
                 <td>{r.unit}</td>
                 <td className="font-medium">{r.name}</td>
                 <td>{r.phone}</td>
@@ -59,7 +79,6 @@ const Residents = () => {
                 <td><span className={`status-badge ${getStatusBadge(r.payment)}`}>{r.payment}</span></td>
                 <td><span className={`status-badge ${getStatusBadge(r.inspection)}`}>{r.inspection}</span></td>
                 <td>{r.movingDate}</td>
-                <td><button className="text-primary text-sm hover:underline">상세</button></td>
               </tr>
             ))}
           </tbody>
@@ -69,6 +88,8 @@ const Residents = () => {
       <div className="mt-3 p-3 bg-warning/10 border border-warning/30 rounded-lg text-sm text-foreground">
         ⚠ QR 미발급 세대 45세대 — 입주증 발급을 위해 QR 발급이 선행되어야 합니다.
       </div>
+
+      <UnitDetailDialog open={dialogOpen} onOpenChange={setDialogOpen} unit={selectedUnit} />
     </div>
   );
 };
