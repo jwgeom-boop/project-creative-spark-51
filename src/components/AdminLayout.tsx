@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { Building2, Users, ClipboardCheck, Truck, CreditCard, Bell, Wrench, MessageSquare, Settings, LayoutDashboard, ChevronDown, Menu, X } from "lucide-react";
+import { Building2, Users, ClipboardCheck, Truck, CreditCard, Bell, Wrench, MessageSquare, Settings, LayoutDashboard, ChevronDown, Menu, X, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface NavItem {
   label: string;
@@ -39,9 +40,12 @@ const navItems: NavItem[] = [
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
+  const { profile, signOut, roles } = useAuth();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileExpandedItem, setMobileExpandedItem] = useState<string | null>(null);
+
+  const roleLabel = roles.includes("super_admin") ? "슈퍼관리자" : roles.includes("site_manager") ? "현장관리자" : roles.includes("cs_agent") ? "CS담당자" : "관리자";
 
   const isActiveParent = (item: NavItem) => {
     if (location.pathname === item.path) return true;
@@ -123,19 +127,25 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           {/* User Info - desktop */}
           <div className="hidden lg:flex ml-auto items-center gap-3 shrink-0">
             <div className="text-right">
-              <div className="text-xs font-medium text-foreground">홍길동 담당</div>
-              <div className="text-xs text-muted-foreground">○○건설 101</div>
+              <div className="text-xs font-medium text-foreground">{profile?.name || "관리자"}</div>
+              <div className="text-xs text-muted-foreground">{roleLabel}</div>
             </div>
             <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground text-xs font-bold">홍</span>
+              <span className="text-primary-foreground text-xs font-bold">{(profile?.name || "관")[0]}</span>
             </div>
+            <button onClick={signOut} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-accent" title="로그아웃">
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
 
-          {/* User Info - mobile (avatar only) */}
-          <div className="lg:hidden flex items-center shrink-0">
+          {/* Mobile header right */}
+          <div className="lg:hidden flex items-center gap-2 shrink-0">
             <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground text-xs font-bold">홍</span>
+              <span className="text-primary-foreground text-xs font-bold">{(profile?.name || "관")[0]}</span>
             </div>
+            <button onClick={signOut} className="p-1.5 rounded-md text-muted-foreground hover:text-destructive" title="로그아웃">
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
