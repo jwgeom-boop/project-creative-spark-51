@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { exportToExcel } from "@/lib/exportExcel";
 import AdvancedFilterBar, { FilterValues, applyCommonFilters } from "@/components/AdvancedFilterBar";
+import TablePagination, { paginate } from "@/components/TablePagination";
 
 const getPaymentStatusBadge = (status: string) => {
   if (status === "납부완료" || status === "승인완료") return "status-complete";
@@ -20,6 +21,7 @@ const Payments = () => {
   const [filters, setFilters] = useState<FilterValues>({
     search: "", dong: "전체", status: searchParams.get("filter") || "전체",
   });
+  const [page, setPage] = useState(1);
 
   const { data: payments = [], isLoading } = useQuery({
     queryKey: ["payments"],
@@ -88,7 +90,7 @@ const Payments = () => {
           statusLabel: "납부상태",
         }}
         values={filters}
-        onChange={setFilters}
+        onChange={(v) => { setFilters(v); setPage(1); }}
       />
 
       <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -113,7 +115,7 @@ const Payments = () => {
           <table className="data-table">
             <thead><tr><th>세대</th><th>입주자</th><th>잔금</th><th>중도금</th><th>옵션비</th><th>확장비</th><th>기타부담금</th><th>합계</th><th>납부상태</th><th>납부확인</th></tr></thead>
             <tbody>
-              {filtered.map((p: any, i: number) => (
+              {paginate(filtered, page).map((p: any, i: number) => (
                 <tr key={i}>
                   <td>{p.unit}</td><td className="font-medium">{p.name}</td>
                   <td className="text-right">{p.balance}</td><td>{p.mid}</td>
@@ -127,6 +129,7 @@ const Payments = () => {
           </table>
         )}
       </div>
+      <TablePagination currentPage={page} totalItems={filtered.length} onPageChange={(p) => setPage(p)} />
     </div>
   );
 };

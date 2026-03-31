@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { exportToExcel } from "@/lib/exportExcel";
 import AdvancedFilterBar, { FilterValues, applyCommonFilters } from "@/components/AdvancedFilterBar";
+import TablePagination, { paginate } from "@/components/TablePagination";
 
 const getStatusBadge = (value: string) => {
   if (["발급완료", "납부완료", "완료", "유효"].includes(value)) return "status-complete";
@@ -18,6 +19,7 @@ const Residents = () => {
   const [selectedUnit, setSelectedUnit] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [filters, setFilters] = useState<FilterValues>({ search: "", dong: "전체", status: "전체" });
+  const [page, setPage] = useState(1);
 
   const { data: residents = [], isLoading } = useQuery({
     queryKey: ["residents"],
@@ -76,7 +78,7 @@ const Residents = () => {
           statusLabel: "사검상태",
         }}
         values={filters}
-        onChange={setFilters}
+        onChange={(v) => { setFilters(v); setPage(1); }}
       />
 
       <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -107,7 +109,7 @@ const Residents = () => {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((r: any, i: number) => (
+              {paginate(filtered, page).map((r: any, i: number) => (
                 <tr key={i} className="cursor-pointer hover:bg-accent/50" onClick={() => { setSelectedUnit(toUnitData(r)); setDialogOpen(true); }}>
                   <td onClick={(e) => e.stopPropagation()}><input type="checkbox" /></td>
                   <td>{r.unit}</td>
@@ -126,6 +128,7 @@ const Residents = () => {
           </table>
         )}
       </div>
+      <TablePagination currentPage={page} totalItems={filtered.length} onPageChange={(p) => setPage(p)} />
 
       <UnitDetailDialog open={dialogOpen} onOpenChange={setDialogOpen} unit={selectedUnit} />
     </div>

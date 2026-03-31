@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { exportToExcel } from "@/lib/exportExcel";
 import AdvancedFilterBar, { FilterValues, applyCommonFilters } from "@/components/AdvancedFilterBar";
+import TablePagination, { paginate } from "@/components/TablePagination";
 
 const getDefectStatusBadge = (status: string) => {
   if (status === "완료") return "status-complete";
@@ -18,6 +19,7 @@ const Defects = () => {
   const [filters, setFilters] = useState<FilterValues>({
     search: "", dong: "전체", status: searchParams.get("filter") || "전체",
   });
+  const [page, setPage] = useState(1);
 
   const { data: defects = [], isLoading } = useQuery({
     queryKey: ["defects"],
@@ -89,7 +91,7 @@ const Defects = () => {
           showDateRange: true,
         }}
         values={filters}
-        onChange={setFilters}
+        onChange={(v) => { setFilters(v); setPage(1); }}
       />
 
       <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -113,7 +115,7 @@ const Defects = () => {
           <table className="data-table">
             <thead><tr><th>번호</th><th>세대</th><th>유형</th><th>하자 내용</th><th>사진</th><th>접수일</th><th>담당업체</th><th>방문예정일</th><th>처리상태</th><th>완료처리</th></tr></thead>
             <tbody>
-              {filtered.map((d: any, i: number) => (
+              {paginate(filtered, page).map((d: any, i: number) => (
                 <tr key={i}>
                   <td>{d.no}</td><td>{d.unit}</td><td>{d.type}</td><td>{d.content}</td><td>{d.photos}</td><td>{d.dateDisplay}</td>
                   <td className={d.company === "미배정" ? "text-destructive font-medium" : ""}>{d.company}</td>
@@ -129,6 +131,7 @@ const Defects = () => {
           </table>
         )}
       </div>
+      <TablePagination currentPage={page} totalItems={filtered.length} onPageChange={(p) => setPage(p)} />
 
       <div className="mt-4 bg-card rounded-lg border border-border p-4">
         <h3 className="text-sm font-semibold mb-2">법정 하자보수 기간 자동 관리</h3>
