@@ -83,8 +83,8 @@ const Defects = () => {
           <button className="px-3 py-2 text-muted-foreground"><Search className="w-4 h-4" /></button>
         </div>
         <div className="ml-auto flex gap-2">
-          <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md">일괄 배정</button>
-          <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1"><Download className="w-4 h-4" /> 엑셀</button>
+          <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md" onClick={() => toast.success("미배정 건이 일괄 배정되었습니다.")}>일괄 배정</button>
+          <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => toast.success("엑셀 파일이 다운로드되었습니다.")}><Download className="w-4 h-4" /> 엑셀</button>
         </div>
       </div>
 
