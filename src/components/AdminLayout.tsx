@@ -1,21 +1,51 @@
+import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { Building2, Users, ClipboardCheck, Truck, CreditCard, Bell, Wrench, MessageSquare, Settings, LayoutDashboard } from "lucide-react";
+import { Building2, Users, ClipboardCheck, Truck, CreditCard, Bell, Wrench, MessageSquare, Settings, LayoutDashboard, ChevronDown } from "lucide-react";
 
-const navItems = [
+interface NavItem {
+  label: string;
+  path: string;
+  icon: any;
+  children?: { label: string; path: string }[];
+}
+
+const navItems: NavItem[] = [
   { label: "홈 대시보드", path: "/", icon: LayoutDashboard },
   { label: "현장관리", path: "/sites", icon: Building2 },
-  { label: "입주자관리", path: "/residents", icon: Users },
+  { label: "입주자관리", path: "/residents", icon: Users, children: [
+    { label: "입주자 목록", path: "/residents" },
+    { label: "세대 목록", path: "/units" },
+    { label: "차량 등록 현황", path: "/vehicles" },
+    { label: "입주증 발급", path: "/permits" },
+  ]},
   { label: "사전점검", path: "/inspection", icon: ClipboardCheck },
   { label: "이사관리", path: "/moving", icon: Truck },
   { label: "납부관리", path: "/payments", icon: CreditCard },
-  { label: "안내·공지", path: "/notices", icon: Bell },
-  { label: "하자보수", path: "/defects", icon: Wrench },
+  { label: "안내·공지", path: "/notices", icon: Bell, children: [
+    { label: "안내문 발송", path: "/notices" },
+    { label: "공지사항 관리", path: "/announcements" },
+    { label: "동의서 관리", path: "/agreements" },
+  ]},
+  { label: "하자보수", path: "/defects", icon: Wrench, children: [
+    { label: "하자보수 관리", path: "/defects" },
+    { label: "하자 통계 리포트", path: "/defect-report" },
+  ]},
   { label: "CS·민원", path: "/cs", icon: MessageSquare },
-  { label: "설정", path: "/settings", icon: Settings },
+  { label: "설정", path: "/settings", icon: Settings, children: [
+    { label: "현장 기본 설정", path: "/settings" },
+    { label: "담당자 계정 관리", path: "/accounts" },
+  ]},
 ];
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+
+  const isActiveParent = (item: NavItem) => {
+    if (location.pathname === item.path) return true;
+    if (item.children) return item.children.some(c => location.pathname === c.path);
+    return false;
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -33,17 +63,43 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           {/* Nav Items */}
           <nav className="flex items-center gap-1 overflow-x-auto">
             {navItems.map((item) => {
-              const isActive = location.pathname === item.path;
+              const active = isActiveParent(item);
+
+              if (item.children) {
+                return (
+                  <div key={item.path} className="relative"
+                    onMouseEnter={() => setOpenDropdown(item.label)}
+                    onMouseLeave={() => setOpenDropdown(null)}
+                  >
+                    <button className={`px-3 py-2 text-sm whitespace-nowrap rounded-md transition-colors flex items-center gap-1 ${
+                      active ? "text-primary font-semibold border-b-2 border-primary" : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                    }`}>
+                      {item.label}
+                      <ChevronDown className="w-3 h-3" />
+                    </button>
+
+                    {openDropdown === item.label && (
+                      <div className="absolute top-full left-0 mt-0 bg-card border border-border rounded-md shadow-lg py-1 min-w-[160px] z-50">
+                        {item.children.map(child => (
+                          <NavLink key={child.path} to={child.path}
+                            onClick={() => setOpenDropdown(null)}
+                            className={`block px-4 py-2 text-sm transition-colors ${
+                              location.pathname === child.path ? "text-primary bg-accent font-medium" : "text-foreground hover:bg-accent"
+                            }`}>
+                            {child.label}
+                          </NavLink>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
               return (
-                <NavLink
-                  key={item.path}
-                  to={item.path}
+                <NavLink key={item.path} to={item.path}
                   className={`px-3 py-2 text-sm whitespace-nowrap rounded-md transition-colors ${
-                    isActive
-                      ? "text-primary font-semibold border-b-2 border-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-accent"
-                  }`}
-                >
+                    active ? "text-primary font-semibold border-b-2 border-primary" : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  }`}>
                   {item.label}
                 </NavLink>
               );
