@@ -127,6 +127,7 @@ const Payments = () => {
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <div className="ml-auto flex gap-2">
           <button className="px-4 py-2 text-sm bg-destructive text-destructive-foreground rounded-md flex items-center gap-1" onClick={() => toast.success("미납 알림이 일괄 발송되었습니다.")}><Send className="w-4 h-4" /> 미납 알림 일괄발송</button>
+          <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => setUploadOpen(true)}><Upload className="w-4 h-4" /> 엑셀 업로드</button>
           <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => {
             exportToExcel(filtered, [
               { key: "unit", label: "세대" }, { key: "name", label: "입주자" }, { key: "balance", label: "잔금" },
