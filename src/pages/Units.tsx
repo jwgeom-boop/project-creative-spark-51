@@ -17,9 +17,26 @@ const Units = () => {
   const [searchParams] = useSearchParams();
   const [selectedUnit, setSelectedUnit] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [dongFilter, setDongFilter] = useState("전체");
   const [statusFilter, setStatusFilter] = useState(searchParams.get("filter") || "전체");
+
+  const uploadConfig: ExcelUploadConfig = {
+    title: "세대 엑셀 업로드",
+    tableName: "units",
+    columns: [
+      { dbField: "dong", label: "동", required: true },
+      { dbField: "ho", label: "호수", required: true },
+      { dbField: "area", label: "전용면적" },
+    ],
+    invalidateKeys: ["units"],
+    transformRow: async (row) => {
+      const { data: sites } = await supabase.from("sites").select("id").limit(1).single();
+      if (!sites) throw new Error("현장 정보가 없습니다.");
+      return { site_id: sites.id, dong: String(row.dong), ho: String(row.ho), area: row.area || "" };
+    },
+  };
 
   const { data: units = [], isLoading } = useQuery({
     queryKey: ["units"],
