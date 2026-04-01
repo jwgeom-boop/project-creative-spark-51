@@ -1,12 +1,33 @@
 import { useState } from "react";
-import { Search, Download, QrCode } from "lucide-react";
+import { Search, Download, QrCode, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import ExcelUploadDialog, { ExcelUploadConfig } from "@/components/ExcelUploadDialog";
 
 const Vehicles = () => {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState(0);
+  const [uploadOpen, setUploadOpen] = useState(false);
+
+  const uploadConfig: ExcelUploadConfig = {
+    title: "차량 엑셀 업로드",
+    tableName: "vehicles",
+    columns: [
+      { dbField: "dong", label: "동", required: true },
+      { dbField: "ho", label: "호수", required: true },
+      { dbField: "plate", label: "차량번호", required: true },
+      { dbField: "car_model", label: "차종" },
+    ],
+    invalidateKeys: ["vehicles"],
+    transformRow: async (row) => {
+      const { data } = await supabase
+        .from("units").select("id")
+        .eq("dong", String(row.dong)).eq("ho", String(row.ho)).maybeSingle();
+      if (!data) throw new Error(`세대 ${row.dong}동 ${row.ho}호를 찾을 수 없습니다.`);
+      return { unit_id: data.id, plate: String(row.plate), car_model: row.car_model || "" };
+    },
+  };
 
   const { data: vehicles = [], isLoading } = useQuery({
     queryKey: ["vehicles"],
@@ -69,6 +90,7 @@ const Vehicles = () => {
         </div>
         <div className="ml-auto flex gap-2">
           <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md flex items-center gap-1" onClick={() => toast.success("QR 일괄발급이 완료되었습니다.")}><QrCode className="w-4 h-4" /> QR 일괄발급</button>
+          <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => setUploadOpen(true)}><Upload className="w-4 h-4" /> 엑셀 업로드</button>
           <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => toast.success("엑셀 파일이 다운로드되었습니다.")}><Download className="w-4 h-4" /> 엑셀 다운로드</button>
         </div>
       </div>
@@ -93,6 +115,7 @@ const Vehicles = () => {
           </table>
         )}
       </div>
+      <ExcelUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} config={uploadConfig} />
     </div>
   );
 };

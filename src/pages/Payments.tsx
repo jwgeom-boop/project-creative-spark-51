@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { Download, Send } from "lucide-react";
+import { Download, Send, Upload } from "lucide-react";
+import ExcelUploadDialog, { ExcelUploadConfig } from "@/components/ExcelUploadDialog";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +23,36 @@ const Payments = () => {
     search: "", dong: "전체", status: searchParams.get("filter") || "전체",
   });
   const [page, setPage] = useState(1);
+  const [uploadOpen, setUploadOpen] = useState(false);
+
+  const uploadConfig: ExcelUploadConfig = {
+    title: "납부내역 엑셀 업로드",
+    tableName: "payments",
+    columns: [
+      { dbField: "dong", label: "동", required: true },
+      { dbField: "ho", label: "호수", required: true },
+      { dbField: "balance", label: "잔금" },
+      { dbField: "option_amount", label: "옵션비" },
+      { dbField: "extension_amount", label: "확장비" },
+      { dbField: "etc_amount", label: "기타부담금" },
+      { dbField: "total_amount", label: "합계" },
+    ],
+    invalidateKeys: ["payments"],
+    transformRow: async (row) => {
+      const { data } = await supabase
+        .from("units").select("id")
+        .eq("dong", String(row.dong)).eq("ho", String(row.ho)).maybeSingle();
+      if (!data) throw new Error(`세대 ${row.dong}동 ${row.ho}호를 찾을 수 없습니다.`);
+      return {
+        unit_id: data.id,
+        balance: Number(row.balance) || 0,
+        option_amount: Number(row.option_amount) || 0,
+        extension_amount: Number(row.extension_amount) || 0,
+        etc_amount: Number(row.etc_amount) || 0,
+        total_amount: Number(row.total_amount) || 0,
+      };
+    },
+  };
 
   const { data: payments = [], isLoading } = useQuery({
     queryKey: ["payments"],
@@ -96,6 +127,7 @@ const Payments = () => {
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <div className="ml-auto flex gap-2">
           <button className="px-4 py-2 text-sm bg-destructive text-destructive-foreground rounded-md flex items-center gap-1" onClick={() => toast.success("미납 알림이 일괄 발송되었습니다.")}><Send className="w-4 h-4" /> 미납 알림 일괄발송</button>
+          <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => setUploadOpen(true)}><Upload className="w-4 h-4" /> 엑셀 업로드</button>
           <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => {
             exportToExcel(filtered, [
               { key: "unit", label: "세대" }, { key: "name", label: "입주자" }, { key: "balance", label: "잔금" },
@@ -130,6 +162,7 @@ const Payments = () => {
         )}
       </div>
       <TablePagination currentPage={page} totalItems={filtered.length} onPageChange={(p) => setPage(p)} />
+      <ExcelUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} config={uploadConfig} />
     </div>
   );
 };

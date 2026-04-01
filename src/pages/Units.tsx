@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
-import { Search, Download } from "lucide-react";
+import { useState } from "react";
+import { Search, Download, Upload } from "lucide-react";
 import { toast } from "sonner";
 import UnitDetailDialog from "@/components/UnitDetailDialog";
+import ExcelUploadDialog, { ExcelUploadConfig } from "@/components/ExcelUploadDialog";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -16,9 +17,26 @@ const Units = () => {
   const [searchParams] = useSearchParams();
   const [selectedUnit, setSelectedUnit] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [dongFilter, setDongFilter] = useState("전체");
   const [statusFilter, setStatusFilter] = useState(searchParams.get("filter") || "전체");
+
+  const uploadConfig: ExcelUploadConfig = {
+    title: "세대 엑셀 업로드",
+    tableName: "units",
+    columns: [
+      { dbField: "dong", label: "동", required: true },
+      { dbField: "ho", label: "호수", required: true },
+      { dbField: "area", label: "전용면적" },
+    ],
+    invalidateKeys: ["units"],
+    transformRow: async (row) => {
+      const { data: sites } = await supabase.from("sites").select("id").limit(1).single();
+      if (!sites) throw new Error("현장 정보가 없습니다.");
+      return { site_id: sites.id, dong: String(row.dong), ho: String(row.ho), area: row.area || "" };
+    },
+  };
 
   const { data: units = [], isLoading } = useQuery({
     queryKey: ["units"],
@@ -73,9 +91,14 @@ const Units = () => {
           <input type="text" placeholder="세대·이름 검색" value={search} onChange={(e) => setSearch(e.target.value)} className="px-3 py-2 text-sm bg-transparent outline-none" />
           <button className="px-3 py-2 text-muted-foreground"><Search className="w-4 h-4" /></button>
         </div>
-        <button className="ml-auto px-4 py-2 text-sm border border-border rounded-md bg-card hover:bg-accent flex items-center gap-1" onClick={() => toast.success("엑셀 파일이 다운로드되었습니다.")}>
-          <Download className="w-4 h-4" /> 엑셀 다운로드
-        </button>
+        <div className="ml-auto flex gap-2">
+          <button className="px-4 py-2 text-sm border border-border rounded-md bg-card hover:bg-accent flex items-center gap-1" onClick={() => setUploadOpen(true)}>
+            <Upload className="w-4 h-4" /> 엑셀 업로드
+          </button>
+          <button className="px-4 py-2 text-sm border border-border rounded-md bg-card hover:bg-accent flex items-center gap-1" onClick={() => toast.success("엑셀 파일이 다운로드되었습니다.")}>
+            <Download className="w-4 h-4" /> 엑셀 다운로드
+          </button>
+        </div>
       </div>
 
       <div className="bg-card rounded-lg border border-border overflow-x-auto">
@@ -112,6 +135,7 @@ const Units = () => {
       </div>
 
       <UnitDetailDialog open={dialogOpen} onOpenChange={setDialogOpen} unit={selectedUnit} />
+      <ExcelUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} config={uploadConfig} />
     </div>
   );
 };

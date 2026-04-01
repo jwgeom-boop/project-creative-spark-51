@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { Download, QrCode, CreditCard } from "lucide-react";
+import { Download, QrCode, CreditCard, Upload } from "lucide-react";
+import ExcelUploadDialog, { ExcelUploadConfig } from "@/components/ExcelUploadDialog";
 import { toast } from "sonner";
 import UnitDetailDialog from "@/components/UnitDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,8 +19,33 @@ const getStatusBadge = (value: string) => {
 const Residents = () => {
   const [selectedUnit, setSelectedUnit] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [filters, setFilters] = useState<FilterValues>({ search: "", dong: "전체", status: "전체" });
   const [page, setPage] = useState(1);
+
+  const uploadConfig: ExcelUploadConfig = {
+    title: "입주자 엑셀 업로드",
+    tableName: "residents",
+    columns: [
+      { dbField: "name", label: "입주자명", required: true },
+      { dbField: "phone", label: "연락처" },
+      { dbField: "email", label: "이메일" },
+      { dbField: "dong", label: "동", required: true },
+      { dbField: "ho", label: "호수", required: true },
+    ],
+    invalidateKeys: ["residents"],
+    transformRow: async (row) => {
+      // Look up unit_id from dong + ho
+      const { data } = await supabase
+        .from("units")
+        .select("id")
+        .eq("dong", String(row.dong))
+        .eq("ho", String(row.ho))
+        .maybeSingle();
+      if (!data) throw new Error(`세대 ${row.dong}동 ${row.ho}호를 찾을 수 없습니다.`);
+      return { unit_id: data.id, name: row.name, phone: row.phone || "", email: row.email || "" };
+    },
+  };
 
   const { data: residents = [], isLoading } = useQuery({
     queryKey: ["residents"],
@@ -99,6 +125,7 @@ const Residents = () => {
         <div className="ml-auto flex gap-2">
           <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md flex items-center gap-1" onClick={() => toast.success("QR 일괄발급이 완료되었습니다.")}><QrCode className="w-4 h-4" /> QR 일괄발급</button>
           <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md flex items-center gap-1" onClick={() => toast.success("입주증 일괄승인이 완료되었습니다.")}><CreditCard className="w-4 h-4" /> 입주증 일괄승인</button>
+          <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => setUploadOpen(true)}><Upload className="w-4 h-4" /> 엑셀 업로드</button>
           <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => {
             exportToExcel(filtered, [
               { key: "unit", label: "세대" }, { key: "name", label: "입주자명" }, { key: "phone", label: "연락처" },
@@ -145,6 +172,7 @@ const Residents = () => {
       <TablePagination currentPage={page} totalItems={filtered.length} onPageChange={(p) => setPage(p)} />
 
       <UnitDetailDialog open={dialogOpen} onOpenChange={setDialogOpen} unit={selectedUnit} />
+      <ExcelUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} config={uploadConfig} />
     </div>
   );
 };
