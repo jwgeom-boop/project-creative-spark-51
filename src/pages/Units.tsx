@@ -91,9 +91,14 @@ const Units = () => {
           <input type="text" placeholder="세대·이름 검색" value={search} onChange={(e) => setSearch(e.target.value)} className="px-3 py-2 text-sm bg-transparent outline-none" />
           <button className="px-3 py-2 text-muted-foreground"><Search className="w-4 h-4" /></button>
         </div>
-        <button className="ml-auto px-4 py-2 text-sm border border-border rounded-md bg-card hover:bg-accent flex items-center gap-1" onClick={() => toast.success("엑셀 파일이 다운로드되었습니다.")}>
-          <Download className="w-4 h-4" /> 엑셀 다운로드
-        </button>
+        <div className="ml-auto flex gap-2">
+          <button className="px-4 py-2 text-sm border border-border rounded-md bg-card hover:bg-accent flex items-center gap-1" onClick={() => setUploadOpen(true)}>
+            <Upload className="w-4 h-4" /> 엑셀 업로드
+          </button>
+          <button className="px-4 py-2 text-sm border border-border rounded-md bg-card hover:bg-accent flex items-center gap-1" onClick={() => toast.success("엑셀 파일이 다운로드되었습니다.")}>
+            <Download className="w-4 h-4" /> 엑셀 다운로드
+          </button>
+        </div>
       </div>
 
       <div className="bg-card rounded-lg border border-border overflow-x-auto">
