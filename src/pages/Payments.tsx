@@ -23,6 +23,36 @@ const Payments = () => {
     search: "", dong: "전체", status: searchParams.get("filter") || "전체",
   });
   const [page, setPage] = useState(1);
+  const [uploadOpen, setUploadOpen] = useState(false);
+
+  const uploadConfig: ExcelUploadConfig = {
+    title: "납부내역 엑셀 업로드",
+    tableName: "payments",
+    columns: [
+      { dbField: "dong", label: "동", required: true },
+      { dbField: "ho", label: "호수", required: true },
+      { dbField: "balance", label: "잔금" },
+      { dbField: "option_amount", label: "옵션비" },
+      { dbField: "extension_amount", label: "확장비" },
+      { dbField: "etc_amount", label: "기타부담금" },
+      { dbField: "total_amount", label: "합계" },
+    ],
+    invalidateKeys: ["payments"],
+    transformRow: async (row) => {
+      const { data } = await supabase
+        .from("units").select("id")
+        .eq("dong", String(row.dong)).eq("ho", String(row.ho)).maybeSingle();
+      if (!data) throw new Error(`세대 ${row.dong}동 ${row.ho}호를 찾을 수 없습니다.`);
+      return {
+        unit_id: data.id,
+        balance: Number(row.balance) || 0,
+        option_amount: Number(row.option_amount) || 0,
+        extension_amount: Number(row.extension_amount) || 0,
+        etc_amount: Number(row.etc_amount) || 0,
+        total_amount: Number(row.total_amount) || 0,
+      };
+    },
+  };
 
   const { data: payments = [], isLoading } = useQuery({
     queryKey: ["payments"],
