@@ -135,6 +135,7 @@ const Units = () => {
       </div>
 
       <UnitDetailDialog open={dialogOpen} onOpenChange={setDialogOpen} unit={selectedUnit} />
+      <ExcelUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} config={uploadConfig} />
     </div>
   );
 };

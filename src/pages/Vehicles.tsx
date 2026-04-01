@@ -115,6 +115,7 @@ const Vehicles = () => {
           </table>
         )}
       </div>
+      <ExcelUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} config={uploadConfig} />
     </div>
   );
 };
