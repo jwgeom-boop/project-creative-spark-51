@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { Download, QrCode, CreditCard } from "lucide-react";
+import { Download, QrCode, CreditCard, Upload } from "lucide-react";
+import ExcelUploadDialog, { ExcelUploadConfig } from "@/components/ExcelUploadDialog";
 import { toast } from "sonner";
 import UnitDetailDialog from "@/components/UnitDetailDialog";
 import { supabase } from "@/integrations/supabase/client";
