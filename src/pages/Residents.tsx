@@ -19,8 +19,33 @@ const getStatusBadge = (value: string) => {
 const Residents = () => {
   const [selectedUnit, setSelectedUnit] = useState<any>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [uploadOpen, setUploadOpen] = useState(false);
   const [filters, setFilters] = useState<FilterValues>({ search: "", dong: "전체", status: "전체" });
   const [page, setPage] = useState(1);
+
+  const uploadConfig: ExcelUploadConfig = {
+    title: "입주자 엑셀 업로드",
+    tableName: "residents",
+    columns: [
+      { dbField: "name", label: "입주자명", required: true },
+      { dbField: "phone", label: "연락처" },
+      { dbField: "email", label: "이메일" },
+      { dbField: "dong", label: "동", required: true },
+      { dbField: "ho", label: "호수", required: true },
+    ],
+    invalidateKeys: ["residents"],
+    transformRow: async (row) => {
+      // Look up unit_id from dong + ho
+      const { data } = await supabase
+        .from("units")
+        .select("id")
+        .eq("dong", String(row.dong))
+        .eq("ho", String(row.ho))
+        .maybeSingle();
+      if (!data) throw new Error(`세대 ${row.dong}동 ${row.ho}호를 찾을 수 없습니다.`);
+      return { unit_id: data.id, name: row.name, phone: row.phone || "", email: row.email || "" };
+    },
+  };
 
   const { data: residents = [], isLoading } = useQuery({
     queryKey: ["residents"],
