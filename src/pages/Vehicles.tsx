@@ -8,6 +8,26 @@ import ExcelUploadDialog, { ExcelUploadConfig } from "@/components/ExcelUploadDi
 const Vehicles = () => {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState(0);
+  const [uploadOpen, setUploadOpen] = useState(false);
+
+  const uploadConfig: ExcelUploadConfig = {
+    title: "차량 엑셀 업로드",
+    tableName: "vehicles",
+    columns: [
+      { dbField: "dong", label: "동", required: true },
+      { dbField: "ho", label: "호수", required: true },
+      { dbField: "plate", label: "차량번호", required: true },
+      { dbField: "car_model", label: "차종" },
+    ],
+    invalidateKeys: ["vehicles"],
+    transformRow: async (row) => {
+      const { data } = await supabase
+        .from("units").select("id")
+        .eq("dong", String(row.dong)).eq("ho", String(row.ho)).maybeSingle();
+      if (!data) throw new Error(`세대 ${row.dong}동 ${row.ho}호를 찾을 수 없습니다.`);
+      return { unit_id: data.id, plate: String(row.plate), car_model: row.car_model || "" };
+    },
+  };
 
   const { data: vehicles = [], isLoading } = useQuery({
     queryKey: ["vehicles"],
