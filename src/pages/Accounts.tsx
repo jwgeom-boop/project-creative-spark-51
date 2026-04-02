@@ -6,23 +6,31 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
+const roleOptions = [
+  { value: "super_admin", label: "총관리자" },
+  { value: "developer", label: "시행사" },
+  { value: "contractor", label: "시공사" },
+  { value: "cs_center", label: "입주지원센터" },
+];
+
 const rolePermissions = [
-  { perm: "모든 현장 접근, 계정 관리, 설정 변경", super: true, admin: false, normal: false },
-  { perm: "담당 현장 전체 기능", super: false, admin: true, normal: false },
-  { perm: "CS·하자 조회·처리만 가능", super: false, admin: false, normal: true },
+  { perm: "모든 현장 접근, 계정 관리, 설정 변경", super: true, dev: false, con: false, cs: false },
+  { perm: "납부 현황, 입주자 관리, 안내·공지", super: false, dev: true, con: false, cs: false },
+  { perm: "하자 접수·처리, 하자 통계 리포트", super: false, dev: false, con: true, cs: false },
+  { perm: "사전점검, 이사관리, 차량·입주증, CS·민원", super: false, dev: false, con: false, cs: true },
 ];
 
 const getRoleBadge = (role: string) => {
   if (role === "super_admin") return "bg-destructive/10 text-destructive";
-  if (role === "site_manager") return "bg-primary/10 text-primary";
-  return "bg-success/10 text-success";
+  if (role === "developer") return "bg-primary/10 text-primary";
+  if (role === "contractor") return "bg-warning/10 text-warning";
+  if (role === "cs_center") return "bg-success/10 text-success";
+  return "bg-muted text-muted-foreground";
 };
 
 const getRoleLabel = (role: string) => {
-  if (role === "super_admin") return "슈퍼관리자";
-  if (role === "site_manager") return "현장관리자";
-  if (role === "cs_agent") return "CS담당자";
-  return role;
+  const found = roleOptions.find(r => r.value === role);
+  return found?.label || role;
 };
 
 const Accounts = () => {
@@ -109,14 +117,15 @@ const Accounts = () => {
           <h2 className="text-sm font-semibold">권한 등급 안내</h2>
         </div>
         <table className="data-table">
-          <thead><tr><th>권한</th><th>슈퍼관리자</th><th>현장관리자</th><th>CS담당자</th></tr></thead>
+          <thead><tr><th>권한</th><th>총관리자</th><th>시행사</th><th>시공사</th><th>입주지원센터</th></tr></thead>
           <tbody>
             {rolePermissions.map((r, i) => (
               <tr key={i}>
                 <td className="text-xs">{r.perm}</td>
                 <td className="text-center">{r.super ? <span className="text-success">✔</span> : "—"}</td>
-                <td className="text-center">{r.admin ? <span className="text-success">✔</span> : "—"}</td>
-                <td className="text-center">{r.normal ? <span className="text-success">✔</span> : "—"}</td>
+                <td className="text-center">{r.dev ? <span className="text-success">✔</span> : "—"}</td>
+                <td className="text-center">{r.con ? <span className="text-success">✔</span> : "—"}</td>
+                <td className="text-center">{r.cs ? <span className="text-success">✔</span> : "—"}</td>
               </tr>
             ))}
           </tbody>
@@ -126,7 +135,17 @@ const Accounts = () => {
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>계정 추가</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground mt-2">새 담당자에게 이메일 초대를 보내 계정을 생성합니다. (추후 구현 예정)</p>
+          <div className="space-y-4 mt-2">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1 block">권한 선택</label>
+              <select className="w-full px-3 py-2 text-sm border border-border rounded-md bg-card">
+                {roleOptions.map(r => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
+            </div>
+            <p className="text-sm text-muted-foreground">새 담당자에게 이메일 초대를 보내 계정을 생성합니다. (추후 구현 예정)</p>
+          </div>
           <div className="flex gap-2 pt-4">
             <button className="flex-1 px-4 py-2 text-sm border border-border rounded-md bg-card" onClick={() => setAddOpen(false)}>닫기</button>
           </div>
