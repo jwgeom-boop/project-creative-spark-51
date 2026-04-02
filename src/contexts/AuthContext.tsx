@@ -34,11 +34,15 @@ const AuthContext = createContext<AuthContextType>({
 
 export const useAuth = () => useContext(AuthContext);
 
+// 🔓 임시: 공유용 기본 역할 (BYPASS_AUTH와 연동)
+const BYPASS_AUTH = true;
+const BYPASS_ROLE: AppRole = "super_admin";
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [roles, setRoles] = useState<AppRole[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(BYPASS_AUTH ? { id: "", user_id: "", name: "관리자(테스트)", email: "test@test.com", phone: null } : null);
+  const [roles, setRoles] = useState<AppRole[]>(BYPASS_AUTH ? [BYPASS_ROLE] : []);
   const [loading, setLoading] = useState(true);
 
   const fetchProfileAndRoles = async (userId: string) => {
@@ -51,6 +55,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   useEffect(() => {
+    if (BYPASS_AUTH) {
+      setLoading(false);
+      return;
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
         setSession(session);
