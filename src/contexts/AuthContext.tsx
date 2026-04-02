@@ -36,7 +36,7 @@ export const useAuth = () => useContext(AuthContext);
 
 // 🔓 임시: 공유용 기본 역할 (BYPASS_AUTH와 연동)
 const BYPASS_AUTH = true;
-const BYPASS_ROLE: AppRole = "cs_center";
+const BYPASS_ROLE: AppRole = "developer";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [session, setSession] = useState<Session | null>(null);
