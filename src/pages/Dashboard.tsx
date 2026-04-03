@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LineChart, Line, CartesianGrid } from "recharts";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from "recharts";
 import { useAuth } from "@/contexts/AuthContext";
 import { Send, FileCheck, Wrench, CalendarCheck, AlertCircle, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -169,15 +169,6 @@ const Dashboard = () => {
     { name: "106동", 완료: 9, 진행중: 13, 미시작: 53 },
   ];
 
-  // Line chart data — monthly payment trend
-  const monthlyPaymentData = [
-    { month: "11월", 납부: 42, 누적: 42 },
-    { month: "12월", 납부: 68, 누적: 110 },
-    { month: "1월", 납부: 89, 누적: 199 },
-    { month: "2월", 납부: 71, 누적: 270 },
-    { month: "3월", 납부: 45, 누적: 315 },
-    { month: "4월", 납부: 18, 누적: 333 },
-  ];
 
   const statusBadge = (status: string) => {
     const map: Record<string, string> = {
@@ -276,31 +267,6 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Monthly Payment Trend */}
-          <div className="bg-card rounded-lg border border-border p-5 mb-6">
-            <div className="flex items-baseline gap-2 mb-4">
-              <h2 className="text-sm font-bold text-foreground">월별 잔금 납부 추이</h2>
-              <span className="text-xs text-muted-foreground">최근 6개월</span>
-            </div>
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={monthlyPaymentData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                <Tooltip />
-                <Line type="monotone" dataKey="납부" stroke="#3b82f6" strokeWidth={2} dot={{ fill: "#3b82f6", r: 4 }} name="월 납부세대" />
-                <Line type="monotone" dataKey="누적" stroke="#22c55e" strokeWidth={2} strokeDasharray="5 5" dot={false} name="누적 납부세대" />
-              </LineChart>
-            </ResponsiveContainer>
-            <div className="flex gap-4 mt-2 justify-center">
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="w-4 border-t-2 border-blue-500 inline-block" /> 월 납부세대
-              </span>
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="w-4 border-t-2 border-dashed border-green-500 inline-block" /> 누적 납부세대
-              </span>
-            </div>
-          </div>
         </>
       )}
 
