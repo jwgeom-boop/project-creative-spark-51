@@ -118,12 +118,14 @@ const Notices = () => {
               <button className="px-4 py-2 text-sm border border-border rounded-md bg-card">미리보기</button>
               <button className="px-4 py-2 text-sm border border-border rounded-md bg-card">임시저장</button>
               <button className="flex-1 px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md flex items-center justify-center gap-1"
+                disabled={sending}
                 onClick={() => {
                   const title = (document.getElementById("notice-title") as HTMLInputElement)?.value;
                   const content = (document.getElementById("notice-content") as HTMLTextAreaElement)?.value;
                   if (title) handleSend(title, content || "");
                 }}>
-                <Send className="w-4 h-4" /> 발 송
+                {sending ? <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary-foreground border-t-transparent" /> : <Send className="w-4 h-4" />}
+                {sending ? "발송 중..." : "발 송"}
               </button>
             </div>
           </div>
