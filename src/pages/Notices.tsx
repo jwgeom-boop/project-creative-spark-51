@@ -96,8 +96,8 @@ const Notices = () => {
 
             <div className="flex items-center gap-3">
               <label className="text-sm font-medium w-20 shrink-0">예약 발송</label>
-              <input type="datetime-local" defaultValue="2026-04-01T09:00" className="px-3 py-2 border border-border rounded-md text-sm bg-background" />
-              <button className="px-3 py-1.5 text-xs border border-border rounded-md bg-card">즉시발송</button>
+              <input type="datetime-local" value={scheduledAt} onChange={e => { setScheduledAt(e.target.value); setIsImmediate(false); }} className="px-3 py-2 border border-border rounded-md text-sm bg-background" />
+              <button className={`px-3 py-1.5 text-xs border rounded-md ${isImmediate ? "bg-primary text-primary-foreground border-primary" : "border-border bg-card"}`} onClick={() => setIsImmediate(true)}>즉시발송</button>
             </div>
 
             <div className="flex gap-3">
