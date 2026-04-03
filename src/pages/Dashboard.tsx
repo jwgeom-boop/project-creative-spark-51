@@ -267,31 +267,6 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Monthly Payment Trend */}
-          <div className="bg-card rounded-lg border border-border p-5 mb-6">
-            <div className="flex items-baseline gap-2 mb-4">
-              <h2 className="text-sm font-bold text-foreground">월별 잔금 납부 추이</h2>
-              <span className="text-xs text-muted-foreground">최근 6개월</span>
-            </div>
-            <ResponsiveContainer width="100%" height={200}>
-              <LineChart data={monthlyPaymentData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-                <Tooltip />
-                <Line type="monotone" dataKey="납부" stroke="#3b82f6" strokeWidth={2} dot={{ fill: "#3b82f6", r: 4 }} name="월 납부세대" />
-                <Line type="monotone" dataKey="누적" stroke="#22c55e" strokeWidth={2} strokeDasharray="5 5" dot={false} name="누적 납부세대" />
-              </LineChart>
-            </ResponsiveContainer>
-            <div className="flex gap-4 mt-2 justify-center">
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="w-4 border-t-2 border-blue-500 inline-block" /> 월 납부세대
-              </span>
-              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="w-4 border-t-2 border-dashed border-green-500 inline-block" /> 누적 납부세대
-              </span>
-            </div>
-          </div>
         </>
       )}
 
