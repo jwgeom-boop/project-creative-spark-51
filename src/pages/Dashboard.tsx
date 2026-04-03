@@ -120,14 +120,34 @@ const Dashboard = () => {
 
   const kpiData = allKpiData.filter(kpi => kpi.roles.some(r => roles.includes(r as any)));
 
+  const handleExcelExport = () => {
+    const headers = ["동호수", "세대주", "연락처", "잔금납부", "사전점검", "이사예약", "입주완료"];
+    const rows = [
+      ["101동 302호", "김민준", "010-1234-5678", "완납", "완료", "예약완료", "미완료"],
+      ["101동 205호", "이서연", "010-2345-6789", "완납", "완료", "미예약", "미완료"],
+      ["102동 501호", "박지호", "010-3456-7890", "미납", "미완료", "미예약", "미완료"],
+      ["102동 103호", "최수아", "010-4567-8901", "완납", "완료", "예약완료", "완료"],
+      ["103동 204호", "정우진", "010-5678-9012", "완납", "완료", "예약완료", "완료"],
+    ];
+    const csvContent = [headers, ...rows].map(row => row.join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `입주현황_${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("엑셀 파일이 다운로드되었습니다");
+  };
+
   // Quick actions with icons
   const allQuickActions = [
-    { label: "안내문 발송", icon: Send, bgColor: "bg-blue-100", iconColor: "text-blue-600", action: () => toast.info("준비 중인 기능입니다"), roles: ["super_admin", "developer"] },
-    { label: "입주증 승인", icon: FileCheck, bgColor: "bg-green-100", iconColor: "text-green-600", action: () => toast.info("준비 중인 기능입니다"), roles: ["super_admin", "cs_center"] },
+    { label: "안내문 발송", icon: Send, bgColor: "bg-blue-100", iconColor: "text-blue-600", action: () => setShowNoticeModal(true), roles: ["super_admin", "developer"] },
+    { label: "입주증 승인", icon: FileCheck, bgColor: "bg-green-100", iconColor: "text-green-600", action: () => setShowPermitModal(true), roles: ["super_admin", "cs_center"] },
     { label: "하자 배정", icon: Wrench, bgColor: "bg-orange-100", iconColor: "text-orange-600", action: () => navigate("/defects"), roles: ["super_admin", "contractor"] },
-    { label: "미납 안내", icon: AlertCircle, bgColor: "bg-red-100", iconColor: "text-red-600", action: () => toast.info("준비 중인 기능입니다"), roles: ["super_admin", "developer"] },
-    { label: "예약 확인", icon: CalendarCheck, bgColor: "bg-purple-100", iconColor: "text-purple-600", action: () => toast.info("준비 중인 기능입니다"), roles: ["super_admin", "cs_center"] },
-    { label: "엑셀 내보내기", icon: Download, bgColor: "bg-gray-100", iconColor: "text-gray-600", action: () => toast.info("준비 중인 기능입니다"), roles: ["super_admin", "developer", "contractor", "cs_center"] },
+    { label: "미납 안내", icon: AlertCircle, bgColor: "bg-red-100", iconColor: "text-red-600", action: () => setShowPaymentModal(true), roles: ["super_admin", "developer"] },
+    { label: "예약 확인", icon: CalendarCheck, bgColor: "bg-purple-100", iconColor: "text-purple-600", action: () => setShowReservationModal(true), roles: ["super_admin", "cs_center"] },
+    { label: "엑셀 내보내기", icon: Download, bgColor: "bg-gray-100", iconColor: "text-gray-600", action: handleExcelExport, roles: ["super_admin", "developer", "contractor", "cs_center"] },
   ];
 
   const quickActions = allQuickActions.filter(a => a.roles.some(r => roles.includes(r as any)));
