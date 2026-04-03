@@ -173,7 +173,7 @@ const Defects = () => {
         <div className="ml-auto flex gap-2">
           <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md" onClick={() => toast.success("미배정 건이 일괄 배정되었습니다.")}>일괄 배정</button>
           <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => {
-            exportToExcel(filtered, [
+            exportToExcel(filtered as any, [
               { key: "no", label: "번호" }, { key: "unit", label: "세대" }, { key: "type", label: "유형" },
               { key: "content", label: "하자내용" }, { key: "dateDisplay", label: "접수일" }, { key: "company", label: "담당업체" },
               { key: "visitDate", label: "방문예정일" }, { key: "status", label: "처리상태" },
