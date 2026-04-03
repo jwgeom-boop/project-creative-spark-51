@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Send, FileText, Upload } from "lucide-react";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 const templates = [
@@ -9,8 +9,12 @@ const templates = [
 ];
 
 const Notices = () => {
+  const queryClient = useQueryClient();
   const [targetType, setTargetType] = useState("전체 세대");
   const [sendMethod, setSendMethod] = useState("앱 푸시 (권장)");
+  const [scheduledAt, setScheduledAt] = useState("2026-04-01T09:00");
+  const [isImmediate, setIsImmediate] = useState(false);
+  const [sending, setSending] = useState(false);
 
   const { data: notices = [], isLoading } = useQuery({
     queryKey: ["notices"],
@@ -25,19 +29,27 @@ const Notices = () => {
   });
 
   const handleSend = async (title: string, content: string) => {
-    const { data: sites } = await supabase.from("sites").select("id").limit(1).single();
-    if (!sites) { toast.error("현장 정보가 없습니다."); return; }
+    if (!title.trim()) { toast.error("제목을 입력해주세요."); return; }
+    setSending(true);
+
+    const { data: site } = await supabase.from("sites").select("id").limit(1).single();
+    if (!site) { toast.error("현장 정보가 없습니다."); setSending(false); return; }
+
+    const useSchedule = !isImmediate && scheduledAt;
 
     const { error } = await supabase.from("notices").insert({
       title,
       content,
-      site_id: sites.id,
-      status: "발송완료",
+      site_id: site.id,
+      status: useSchedule ? "예약발송" : "발송완료",
       target_count: 300,
       read_rate: 0,
-    });
-    if (error) { toast.error("발송 실패: " + error.message); return; }
-    toast.success("안내문이 발송되었습니다.");
+    } as any);
+
+    setSending(false);
+    if (error) { toast.error(`발송 실패: ${error.message}`); return; }
+    toast.success(useSchedule ? "안내문이 예약 발송되었습니다." : "안내문이 발송되었습니다.");
+    queryClient.invalidateQueries({ queryKey: ["notices"] });
   };
 
   return (
