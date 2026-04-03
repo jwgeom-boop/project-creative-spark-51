@@ -174,6 +174,19 @@ const Dashboard = () => {
     { name: "106동", 완료: 9, 진행중: 13, 미시작: 53 },
   ];
 
+  const [showNoticeModal, setShowNoticeModal] = useState(false);
+  const [showPermitModal, setShowPermitModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showReservationModal, setShowReservationModal] = useState(false);
+
+  const { data: site } = useQuery({
+    queryKey: ["dashboard-first-site"],
+    queryFn: async () => {
+      const { data } = await supabase.from("sites").select("id").limit(1).single();
+      return data;
+    },
+  });
+
 
   const statusBadge = (status: string) => {
     const map: Record<string, string> = {
