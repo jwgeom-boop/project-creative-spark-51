@@ -150,30 +150,30 @@ const Sites = () => {
           <DialogHeader><DialogTitle>{editingSiteId ? "현장 수정" : "새 현장 등록"}</DialogTitle></DialogHeader>
           <div className="space-y-3 mt-2 max-h-[60vh] overflow-y-auto pr-1">
             <FormField label="단지명" required>
-              <input type="text" value={form.name} onChange={e => setField("name", e.target.value)} className="form-input" placeholder="예: 힐스테이트 광교중앙역" />
+              <input type="text" value={form.name} onChange={e => setField("name", e.target.value)} className="w-full px-3 py-2 border border-border rounded-md text-sm bg-background" placeholder="예: 힐스테이트 광교중앙역" />
             </FormField>
             <FormField label="주소" required>
-              <input type="text" value={form.address} onChange={e => setField("address", e.target.value)} className="form-input" placeholder="예: 경기도 수원시 영통구 법조로 105" />
+              <input type="text" value={form.address} onChange={e => setField("address", e.target.value)} className="w-full px-3 py-2 border border-border rounded-md text-sm bg-background" placeholder="예: 경기도 수원시 영통구 법조로 105" />
             </FormField>
             <FormField label="전체 세대수" required>
-              <input type="number" value={form.totalUnits} onChange={e => setField("totalUnits", e.target.value)} className="form-input" placeholder="예: 450" />
+              <input type="number" value={form.totalUnits} onChange={e => setField("totalUnits", e.target.value)} className="w-full px-3 py-2 border border-border rounded-md text-sm bg-background" placeholder="예: 450" />
             </FormField>
             <FormField label="동 수">
-              <input type="number" value={form.dongCount} onChange={e => setField("dongCount", e.target.value)} className="form-input" placeholder="예: 6" />
+              <input type="number" value={form.dongCount} onChange={e => setField("dongCount", e.target.value)} className="w-full px-3 py-2 border border-border rounded-md text-sm bg-background" placeholder="예: 6" />
             </FormField>
             <div className="flex gap-3">
               <FormField label="입주 시작일" className="flex-1">
-                <input type="date" value={form.moveInStart} onChange={e => setField("moveInStart", e.target.value)} className="form-input" />
+                <input type="date" value={form.moveInStart} onChange={e => setField("moveInStart", e.target.value)} className="w-full px-3 py-2 border border-border rounded-md text-sm bg-background" />
               </FormField>
               <FormField label="입주 종료일" className="flex-1">
-                <input type="date" value={form.moveInEnd} onChange={e => setField("moveInEnd", e.target.value)} className="form-input" />
+                <input type="date" value={form.moveInEnd} onChange={e => setField("moveInEnd", e.target.value)} className="w-full px-3 py-2 border border-border rounded-md text-sm bg-background" />
               </FormField>
             </div>
             <FormField label="시행사명">
-              <input type="text" value={form.developer} onChange={e => setField("developer", e.target.value)} className="form-input" placeholder="예: 현대건설" />
+              <input type="text" value={form.developer} onChange={e => setField("developer", e.target.value)} className="w-full px-3 py-2 border border-border rounded-md text-sm bg-background" placeholder="예: 현대건설" />
             </FormField>
             <FormField label="시공사명">
-              <input type="text" value={form.contractor} onChange={e => setField("contractor", e.target.value)} className="form-input" placeholder="예: 현대엔지니어링" />
+              <input type="text" value={form.contractor} onChange={e => setField("contractor", e.target.value)} className="w-full px-3 py-2 border border-border rounded-md text-sm bg-background" placeholder="예: 현대엔지니어링" />
             </FormField>
             <FormField label="상태">
               <Select value={form.status} onValueChange={v => setField("status", v)}>
