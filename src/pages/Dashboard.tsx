@@ -1,10 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LineChart, Line, CartesianGrid } from "recharts";
 import { useAuth } from "@/contexts/AuthContext";
-
-const COLORS = ["hsl(var(--primary))", "hsl(var(--destructive))", "hsl(var(--warning, 38 92% 50%))", "hsl(142 76% 36%)", "hsl(262 83% 58%)", "hsl(199 89% 48%)"];
+import { Send, FileCheck, Wrench, CalendarCheck, AlertCircle, Download } from "lucide-react";
+import { toast } from "sonner";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -95,7 +95,6 @@ const Dashboard = () => {
   const noPermit = units.filter((u: any) => u.permit_status === "미발급").length;
   const noMoving = units.filter((u: any) => u.moving_status === "미예약").length;
 
-  // Trend data for KPI cards
   const trendData: Record<string, { arrow: string; text: string; className: string }> = {
     "입주 완료율": { arrow: "▲", text: "4.1% 지난주 대비", className: "text-green-600" },
     "사검 완료율": { arrow: "▲", text: "2.3% 지난주 대비", className: "text-green-600" },
@@ -116,13 +115,14 @@ const Dashboard = () => {
 
   const kpiData = allKpiData.filter(kpi => kpi.roles.some(r => roles.includes(r as any)));
 
+  // Quick actions with icons
   const allQuickActions = [
-    { label: "안내문 발송", path: "/notices", roles: ["super_admin", "developer"] },
-    { label: "입주증 승인", path: "/permits", roles: ["super_admin", "cs_center"] },
-    { label: "하자 배정", path: "/defects", roles: ["super_admin", "contractor"] },
-    { label: "연체 알림 발송", path: "/payments", roles: ["super_admin", "developer"] },
-    { label: "공지 등록", path: "/announcements", roles: ["super_admin", "developer"] },
-    { label: "사검 예약 확인", path: "/inspection", roles: ["super_admin", "cs_center"] },
+    { label: "안내문 발송", icon: Send, bgColor: "bg-blue-100", iconColor: "text-blue-600", action: () => toast.info("준비 중인 기능입니다"), roles: ["super_admin", "developer"] },
+    { label: "입주증 승인", icon: FileCheck, bgColor: "bg-green-100", iconColor: "text-green-600", action: () => toast.info("준비 중인 기능입니다"), roles: ["super_admin", "cs_center"] },
+    { label: "하자 배정", icon: Wrench, bgColor: "bg-orange-100", iconColor: "text-orange-600", action: () => navigate("/defects"), roles: ["super_admin", "contractor"] },
+    { label: "미납 안내", icon: AlertCircle, bgColor: "bg-red-100", iconColor: "text-red-600", action: () => toast.info("준비 중인 기능입니다"), roles: ["super_admin", "developer"] },
+    { label: "예약 확인", icon: CalendarCheck, bgColor: "bg-purple-100", iconColor: "text-purple-600", action: () => toast.info("준비 중인 기능입니다"), roles: ["super_admin", "cs_center"] },
+    { label: "엑셀 내보내기", icon: Download, bgColor: "bg-gray-100", iconColor: "text-gray-600", action: () => toast.info("준비 중인 기능입니다"), roles: ["super_admin", "developer", "contractor", "cs_center"] },
   ];
 
   const quickActions = allQuickActions.filter(a => a.roles.some(r => roles.includes(r as any)));
@@ -159,20 +159,25 @@ const Dashboard = () => {
   const defectColors = ["#22c55e", "#f59e0b", "#ef4444"];
   const defectPercent = allDefects ? Math.round((completedDefects / allDefects) * 100) : 82;
 
-  const dongMap = new Map<string, { total: number; complete: number }>();
-  units.forEach((u: any) => {
-    if (!dongMap.has(u.dong)) dongMap.set(u.dong, { total: 0, complete: 0 });
-    const entry = dongMap.get(u.dong)!;
-    entry.total++;
-    if (u.status === "입주완료") entry.complete++;
-  });
-  const dongBarData = Array.from(dongMap.entries())
-    .sort((a, b) => a[0].localeCompare(b[0], "ko", { numeric: true }))
-    .map(([dong, data]) => ({
-      name: `${dong}동`,
-      입주완료: data.complete,
-      미입주: data.total - data.complete,
-    }));
+  // Bar chart data — 6 buildings
+  const dongBarData = [
+    { name: "101동", 완료: 28, 진행중: 42, 미시작: 5 },
+    { name: "102동", 완료: 22, 진행중: 38, 미시작: 15 },
+    { name: "103동", 완료: 31, 진행중: 29, 미시작: 15 },
+    { name: "104동", 완료: 19, 진행중: 44, 미시작: 12 },
+    { name: "105동", 완료: 18, 진행중: 35, 미시작: 22 },
+    { name: "106동", 완료: 9, 진행중: 13, 미시작: 53 },
+  ];
+
+  // Line chart data — monthly payment trend
+  const monthlyPaymentData = [
+    { month: "11월", 납부: 42, 누적: 42 },
+    { month: "12월", 납부: 68, 누적: 110 },
+    { month: "1월", 납부: 89, 누적: 199 },
+    { month: "2월", 납부: 71, 누적: 270 },
+    { month: "3월", 납부: 45, 누적: 315 },
+    { month: "4월", 납부: 18, 누적: 333 },
+  ];
 
   const statusBadge = (status: string) => {
     const map: Record<string, string> = {
@@ -243,43 +248,82 @@ const Dashboard = () => {
 
       {/* Charts Section */}
       {showCharts && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <div className="bg-card rounded-lg border border-border p-5">
-            <h2 className="text-sm font-semibold text-foreground mb-4">현황 요약</h2>
-            <div className="flex justify-around items-start">
-              {renderMiniPie(moveInPieData, moveInColors, "입주율", moveInPercent)}
-              {renderMiniPie(paymentPieData, paymentColors, "납부율", paymentPercent)}
-              {renderMiniPie(defectPieData, defectColors, "하자 처리율", defectPercent)}
+        <>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div className="bg-card rounded-lg border border-border p-5">
+              <h2 className="text-sm font-semibold text-foreground mb-4">현황 요약</h2>
+              <div className="flex justify-around items-start">
+                {renderMiniPie(moveInPieData, moveInColors, "입주율", moveInPercent)}
+                {renderMiniPie(paymentPieData, paymentColors, "납부율", paymentPercent)}
+                {renderMiniPie(defectPieData, defectColors, "하자 처리율", defectPercent)}
+              </div>
             </div>
-          </div>
 
-          <div className="bg-card rounded-lg border border-border p-5">
-            <h2 className="text-sm font-semibold text-foreground mb-4">동별 입주 현황</h2>
-            {dongBarData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={dongBarData} barSize={20}>
+            <div className="bg-card rounded-lg border border-border p-5">
+              <h2 className="text-sm font-semibold text-foreground mb-4">동별 입주 현황</h2>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={dongBarData} barSize={18}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis dataKey="name" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
                   <Tooltip />
-                  <Bar dataKey="입주완료" stackId="a" fill="hsl(142 76% 36%)" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="미입주" stackId="a" fill="hsl(var(--muted))" radius={[4, 4, 0, 0]} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Bar dataKey="완료" stackId="a" fill="#22c55e" />
+                  <Bar dataKey="진행중" stackId="a" fill="#3b82f6" />
+                  <Bar dataKey="미시작" stackId="a" fill="#e5e7eb" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-[180px] text-sm text-muted-foreground">데이터 없음</div>
-            )}
+            </div>
           </div>
-        </div>
+
+          {/* Monthly Payment Trend */}
+          <div className="bg-card rounded-lg border border-border p-5 mb-6">
+            <div className="flex items-baseline gap-2 mb-4">
+              <h2 className="text-sm font-bold text-foreground">월별 잔금 납부 추이</h2>
+              <span className="text-xs text-muted-foreground">최근 6개월</span>
+            </div>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={monthlyPaymentData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                <Tooltip />
+                <Line type="monotone" dataKey="납부" stroke="#3b82f6" strokeWidth={2} dot={{ fill: "#3b82f6", r: 4 }} name="월 납부세대" />
+                <Line type="monotone" dataKey="누적" stroke="#22c55e" strokeWidth={2} strokeDasharray="5 5" dot={false} name="누적 납부세대" />
+              </LineChart>
+            </ResponsiveContainer>
+            <div className="flex gap-4 mt-2 justify-center">
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="w-4 border-t-2 border-blue-500 inline-block" /> 월 납부세대
+              </span>
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="w-4 border-t-2 border-dashed border-green-500 inline-block" /> 누적 납부세대
+              </span>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Quick Actions */}
       {quickActions.length > 0 && (
         <div className="mb-6">
           <h2 className="text-sm font-semibold text-foreground mb-3">퀵 업무 실행</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
-            {quickActions.map((action) => (
-              <button key={action.label} className="quick-action-btn" onClick={() => navigate(action.path)}>{action.label}</button>
-            ))}
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+            {quickActions.map((action) => {
+              const Icon = action.icon;
+              return (
+                <button
+                  key={action.label}
+                  className="bg-card rounded-xl p-4 shadow-sm border border-border flex flex-col items-center gap-2 hover:shadow-md transition"
+                  onClick={action.action}
+                >
+                  <div className={`w-10 h-10 rounded-full ${action.bgColor} flex items-center justify-center`}>
+                    <Icon className={`w-5 h-5 ${action.iconColor}`} />
+                  </div>
+                  <span className="text-xs font-semibold text-foreground mt-1">{action.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
