@@ -23,6 +23,7 @@ import Permits from "./pages/Permits";
 import Announcements from "./pages/Announcements";
 import DefectReport from "./pages/DefectReport";
 import Accounts from "./pages/Accounts";
+import Vendors from "./pages/Vendors";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
