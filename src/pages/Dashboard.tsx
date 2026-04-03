@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
@@ -5,6 +6,10 @@ import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveCo
 import { useAuth } from "@/contexts/AuthContext";
 import { Send, FileCheck, Wrench, CalendarCheck, AlertCircle, Download } from "lucide-react";
 import { toast } from "sonner";
+import NoticeQuickModal from "@/components/dashboard/NoticeQuickModal";
+import PermitQuickModal from "@/components/dashboard/PermitQuickModal";
+import PaymentQuickModal from "@/components/dashboard/PaymentQuickModal";
+import ReservationQuickModal from "@/components/dashboard/ReservationQuickModal";
 
 const Dashboard = () => {
   const navigate = useNavigate();
