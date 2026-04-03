@@ -355,10 +355,13 @@ export type Database = {
           created_at: string
           id: string
           read_rate: number | null
+          scheduled_at: string | null
+          send_method: string | null
           sent_date: string
           site_id: string
           status: string
           target_count: number | null
+          target_type: string | null
           title: string
           updated_at: string
         }
@@ -367,10 +370,13 @@ export type Database = {
           created_at?: string
           id?: string
           read_rate?: number | null
+          scheduled_at?: string | null
+          send_method?: string | null
           sent_date?: string
           site_id: string
           status?: string
           target_count?: number | null
+          target_type?: string | null
           title: string
           updated_at?: string
         }
@@ -379,10 +385,13 @@ export type Database = {
           created_at?: string
           id?: string
           read_rate?: number | null
+          scheduled_at?: string | null
+          send_method?: string | null
           sent_date?: string
           site_id?: string
           status?: string
           target_count?: number | null
+          target_type?: string | null
           title?: string
           updated_at?: string
         }
