@@ -396,6 +396,10 @@ const Dashboard = () => {
           </div>
         )}
       </div>
+      <NoticeQuickModal open={showNoticeModal} onOpenChange={setShowNoticeModal} siteId={site?.id ?? null} />
+      <PermitQuickModal open={showPermitModal} onOpenChange={setShowPermitModal} />
+      <PaymentQuickModal open={showPaymentModal} onOpenChange={setShowPaymentModal} />
+      <ReservationQuickModal open={showReservationModal} onOpenChange={setShowReservationModal} />
     </div>
   );
 };
