@@ -39,6 +39,7 @@ const navItems: NavItem[] = [
     { label: "하자 접수", path: "/defect-report", allowedRoles: ["super_admin", "contractor"] },
   ]},
   { label: "CS·민원", path: "/cs", icon: MessageSquare, allowedRoles: ["super_admin", "cs_center"] },
+  { label: "업체관리", path: "/vendors", icon: Store, allowedRoles: ["super_admin", "developer"] },
   { label: "계정관리", path: "/accounts", icon: UserCog, allowedRoles: ["super_admin"] },
   { label: "설정", path: "/settings", icon: Settings, allowedRoles: ["super_admin"] },
 ];

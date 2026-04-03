@@ -63,6 +63,7 @@ const App = () => (
                     <Route path="/announcements" element={<Announcements />} />
                     <Route path="/defect-report" element={<DefectReport />} />
                     <Route path="/accounts" element={<Accounts />} />
+                    <Route path="/vendors" element={<Vendors />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </AdminLayout>
