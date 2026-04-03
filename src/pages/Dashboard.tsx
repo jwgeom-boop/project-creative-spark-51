@@ -169,15 +169,6 @@ const Dashboard = () => {
     { name: "106동", 완료: 9, 진행중: 13, 미시작: 53 },
   ];
 
-  // Line chart data — monthly payment trend
-  const monthlyPaymentData = [
-    { month: "11월", 납부: 42, 누적: 42 },
-    { month: "12월", 납부: 68, 누적: 110 },
-    { month: "1월", 납부: 89, 누적: 199 },
-    { month: "2월", 납부: 71, 누적: 270 },
-    { month: "3월", 납부: 45, 누적: 315 },
-    { month: "4월", 납부: 18, 누적: 333 },
-  ];
 
   const statusBadge = (status: string) => {
     const map: Record<string, string> = {
