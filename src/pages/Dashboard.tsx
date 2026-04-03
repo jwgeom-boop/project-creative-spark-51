@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, LineChart, Line, CartesianGrid } from "recharts";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from "recharts";
 import { useAuth } from "@/contexts/AuthContext";
 import { Send, FileCheck, Wrench, CalendarCheck, AlertCircle, Download } from "lucide-react";
 import { toast } from "sonner";
