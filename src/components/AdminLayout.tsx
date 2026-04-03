@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { Building2, Users, ClipboardCheck, Truck, CreditCard, Bell, Wrench, MessageSquare, Settings, LayoutDashboard, ChevronDown, Menu, X, LogOut, UserCog } from "lucide-react";
+import { Building2, Users, ClipboardCheck, Truck, CreditCard, Bell, Wrench, MessageSquare, Settings, LayoutDashboard, ChevronDown, Menu, X, LogOut, UserCog, Store } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface NavChild {
@@ -39,6 +39,7 @@ const navItems: NavItem[] = [
     { label: "하자 접수", path: "/defect-report", allowedRoles: ["super_admin", "contractor"] },
   ]},
   { label: "CS·민원", path: "/cs", icon: MessageSquare, allowedRoles: ["super_admin", "cs_center"] },
+  { label: "업체관리", path: "/vendors", icon: Store, allowedRoles: ["super_admin", "developer"] },
   { label: "계정관리", path: "/accounts", icon: UserCog, allowedRoles: ["super_admin"] },
   { label: "설정", path: "/settings", icon: Settings, allowedRoles: ["super_admin"] },
 ];
