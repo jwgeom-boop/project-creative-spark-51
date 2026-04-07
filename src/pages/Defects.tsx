@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Download } from "lucide-react";
+import { Download, Wrench } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -250,41 +250,71 @@ const Defects = () => {
       <div className="bg-card rounded-lg border border-border overflow-x-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" /></div>
+        ) : currentPageItems.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4">
+            <Wrench className="w-12 h-12 text-muted-foreground/50 mb-4" />
+            <p className="text-sm font-medium text-muted-foreground mb-1">{filters.search ? "검색 결과가 없습니다" : "접수된 하자가 없습니다"}</p>
+            <p className="text-xs text-muted-foreground/70">{filters.search ? `'${filters.search}'에 대한 결과를 찾을 수 없습니다` : "입주민 앱에서 하자 접수 시 표시됩니다"}</p>
+          </div>
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th><input type="checkbox" checked={allPageChecked} onChange={toggleAll} /></th>
-                <th>번호</th><th>세대</th><th>유형</th><th>하자 내용</th><th>사진</th><th>접수일</th><th>담당업체</th><th>방문예정일</th><th>처리상태</th><th>배정</th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            {/* Mobile card view */}
+            <div className="block md:hidden divide-y divide-border">
               {currentPageItems.map((d: any) => (
-                <tr
-                  key={d.id}
-                  className={cn("cursor-pointer hover:bg-muted/50", checkedIds.has(d.id) && "bg-blue-50")}
-                  onClick={() => openDetail(d)}
-                >
-                  <td onClick={(e) => e.stopPropagation()}>
-                    <input type="checkbox" checked={checkedIds.has(d.id)} onChange={() => toggleOne(d.id)} />
-                  </td>
-                  <td>{d.no}</td><td>{d.unit}</td><td>{d.type}</td><td>{d.content}</td><td>{d.photos}</td><td>{d.dateDisplay}</td>
-                  <td className={d.company === "미배정" ? "text-destructive font-medium" : ""}>{d.company}</td>
-                  <td>{d.visitDate}</td>
-                  <td><span className={`status-badge ${getDefectStatusBadge(d.status)}`}>{d.status}</span></td>
-                  <td onClick={(e) => e.stopPropagation()}>
-                    {d.status === "미배정" ? (
-                      <AssigneePopover onSelect={(name) => handleInlineAssign(d.id, name)}>
-                        <button className="text-primary text-sm hover:underline">배정 ▾</button>
-                      </AssigneePopover>
-                    ) : d.status === "완료" ? (
-                      <span className="text-green-600 text-sm">완료✓</span>
-                    ) : "—"}
-                  </td>
-                </tr>
+                <div key={d.id} className={cn("p-3 cursor-pointer", checkedIds.has(d.id) && "bg-primary/5")} onClick={() => openDetail(d)}>
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" checked={checkedIds.has(d.id)} onChange={() => toggleOne(d.id)} onClick={e => e.stopPropagation()} />
+                      <span className="font-medium text-sm">{d.unit}</span>
+                      <span className="text-xs text-muted-foreground">{d.type}</span>
+                    </div>
+                    <span className={`status-badge ${getDefectStatusBadge(d.status)}`}>{d.status}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">{d.content}</p>
+                  <div className="flex gap-3 text-xs text-muted-foreground mt-1">
+                    <span>{d.dateDisplay}</span>
+                    <span className={d.company === "미배정" ? "text-destructive" : ""}>{d.company}</span>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+            {/* Desktop table */}
+            <table className="data-table hidden md:table">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" checked={allPageChecked} onChange={toggleAll} /></th>
+                  <th>번호</th><th>세대</th><th>유형</th><th className="hidden lg:table-cell">하자 내용</th><th className="hidden lg:table-cell">사진</th><th>접수일</th><th>담당업체</th><th className="hidden lg:table-cell">방문예정일</th><th>처리상태</th><th>배정</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentPageItems.map((d: any) => (
+                  <tr
+                    key={d.id}
+                    className={cn("cursor-pointer hover:bg-muted/50", checkedIds.has(d.id) && "bg-primary/5")}
+                    onClick={() => openDetail(d)}
+                  >
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <input type="checkbox" checked={checkedIds.has(d.id)} onChange={() => toggleOne(d.id)} />
+                    </td>
+                    <td>{d.no}</td><td>{d.unit}</td><td>{d.type}</td>
+                    <td className="hidden lg:table-cell">{d.content}</td><td className="hidden lg:table-cell">{d.photos}</td><td>{d.dateDisplay}</td>
+                    <td className={d.company === "미배정" ? "text-destructive font-medium" : ""}>{d.company}</td>
+                    <td className="hidden lg:table-cell">{d.visitDate}</td>
+                    <td><span className={`status-badge ${getDefectStatusBadge(d.status)}`}>{d.status}</span></td>
+                    <td onClick={(e) => e.stopPropagation()}>
+                      {d.status === "미배정" ? (
+                        <AssigneePopover onSelect={(name) => handleInlineAssign(d.id, name)}>
+                          <button className="text-primary text-sm hover:underline">배정 ▾</button>
+                        </AssigneePopover>
+                      ) : d.status === "완료" ? (
+                        <span className="text-green-600 text-sm">완료✓</span>
+                      ) : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
         )}
       </div>
       <TablePagination currentPage={page} totalItems={filtered.length} onPageChange={(p) => setPage(p)} />
