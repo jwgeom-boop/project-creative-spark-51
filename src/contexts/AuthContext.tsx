@@ -20,6 +20,9 @@ interface AuthContextType {
   loading: boolean;
   signOut: () => Promise<void>;
   hasRole: (role: AppRole) => boolean;
+  activeSiteId: string | null;
+  activeSiteName: string | null;
+  setActiveSite: (id: string, name: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -30,6 +33,9 @@ const AuthContext = createContext<AuthContextType>({
   loading: true,
   signOut: async () => {},
   hasRole: () => false,
+  activeSiteId: null,
+  activeSiteName: null,
+  setActiveSite: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -44,6 +50,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [profile, setProfile] = useState<Profile | null>(BYPASS_AUTH ? { id: "", user_id: "", name: "관리자(테스트)", email: "test@test.com", phone: null } : null);
   const [roles, setRoles] = useState<AppRole[]>(BYPASS_AUTH ? [BYPASS_ROLE] : []);
   const [loading, setLoading] = useState(true);
+  const [activeSiteId, setActiveSiteId] = useState<string | null>(() => localStorage.getItem("activeSiteId"));
+  const [activeSiteName, setActiveSiteName] = useState<string | null>(() => localStorage.getItem("activeSiteName"));
+
+  const setActiveSite = (id: string, name: string) => {
+    setActiveSiteId(id);
+    setActiveSiteName(name);
+    localStorage.setItem("activeSiteId", id);
+    localStorage.setItem("activeSiteName", name);
+  };
 
   const fetchProfileAndRoles = async (userId: string) => {
     const [profileRes, rolesRes] = await Promise.all([
@@ -97,7 +112,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const hasRole = (role: AppRole) => roles.includes(role);
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, roles, loading, signOut, hasRole }}>
+    <AuthContext.Provider value={{ session, user, profile, roles, loading, signOut, hasRole, activeSiteId, activeSiteName, setActiveSite }}>
       {children}
     </AuthContext.Provider>
   );
