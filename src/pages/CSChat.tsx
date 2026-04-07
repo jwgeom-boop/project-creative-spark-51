@@ -13,6 +13,9 @@ const getStatusColor = (status: string) => {
   return "status-complete";
 };
 
+// Simulate unread counts per chat (dummy data)
+const INITIAL_UNREAD: Record<string, number> = {};
+
 const CSChat = () => {
   const queryClient = useQueryClient();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
@@ -22,6 +25,11 @@ const CSChat = () => {
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Track unread counts locally
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>(INITIAL_UNREAD);
+  // Track which messages are read by admin
+  const [readMessageIds, setReadMessageIds] = useState<Set<string>>(new Set());
 
   const { data: chats = [], isLoading: loadingChats } = useQuery({
     queryKey: ["cs_chats"],
@@ -34,6 +42,19 @@ const CSChat = () => {
       return data;
     },
   });
+
+  // Initialize unread counts from chats (simulate: first 2 chats have unread)
+  useEffect(() => {
+    if (chats.length > 0 && Object.keys(unreadCounts).length === 0) {
+      const initial: Record<string, number> = {};
+      chats.forEach((c: any, i: number) => {
+        if (i === 0) initial[c.id] = 3;
+        else if (i === 1) initial[c.id] = 1;
+        else initial[c.id] = 0;
+      });
+      setUnreadCounts(initial);
+    }
+  }, [chats]);
 
   const { data: residents = [] } = useQuery({
     queryKey: ["residents-for-cs"],
@@ -68,6 +89,29 @@ const CSChat = () => {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Mark as read when selecting a chat
+  const handleSelectChat = (chatId: string) => {
+    setSelectedChatId(chatId);
+    // Clear unread count
+    setUnreadCounts(prev => ({ ...prev, [chatId]: 0 }));
+  };
+
+  // Mark resident messages as read when chat is opened
+  useEffect(() => {
+    if (selectedChatId && messages.length > 0) {
+      const residentMsgIds = messages
+        .filter((m: any) => m.sender === "resident")
+        .map((m: any) => m.id);
+      setReadMessageIds(prev => {
+        const next = new Set(prev);
+        residentMsgIds.forEach((id: string) => next.add(id));
+        return next;
+      });
+    }
+  }, [selectedChatId, messages]);
+
+  const totalUnread = useMemo(() => Object.values(unreadCounts).reduce((a, b) => a + b, 0), [unreadCounts]);
 
   const sendMutation = useMutation({
     mutationFn: async (text: string) => {
@@ -109,13 +153,9 @@ const CSChat = () => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("파일 크기가 10MB를 초과합니다.");
-      return;
-    }
+    if (file.size > 10 * 1024 * 1024) { toast.error("파일 크기가 10MB를 초과합니다."); return; }
     if (file.type.startsWith("image/")) {
       toast.success(`이미지 "${file.name}" 첨부 완료`);
-      // In production, would upload to storage
       sendMutation.mutate(`[이미지] ${file.name}`);
     } else {
       toast.success(`파일 "${file.name}" 첨부 완료`);
@@ -124,7 +164,6 @@ const CSChat = () => {
     e.target.value = "";
   };
 
-  // Search with debounce
   const filteredChats = useMemo(() => {
     let result = chats.filter((c: any) => statusFilter === "전체" || c.status === statusFilter);
     if (searchQuery.trim()) {
@@ -146,7 +185,12 @@ const CSChat = () => {
   return (
     <div>
       <div className="page-header">
-        <h1 className="page-title">CS 채팅 상담</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="page-title">CS 채팅 상담</h1>
+          {totalUnread > 0 && (
+            <span className="bg-destructive text-destructive-foreground text-xs font-bold px-2 py-0.5 rounded-full">{totalUnread}</span>
+          )}
+        </div>
         <p className="page-description">인앱 텍스트 상담 · 세대별 민원 이력 · AI FAQ 자동응답 설정</p>
       </div>
 
@@ -163,16 +207,10 @@ const CSChat = () => {
             </select>
           </div>
 
-          {/* Search */}
           <div className="px-3 py-2 border-b border-border">
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-              <Input
-                placeholder="입주자명 / 세대 / 내용 검색"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 h-8 text-sm"
-              />
+              <Input placeholder="입주자명 / 세대 / 내용 검색" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-8 h-8 text-sm" />
               {searchQuery && (
                 <button className="absolute right-2 top-1/2 -translate-y-1/2" onClick={() => setSearchQuery("")}>
                   <X className="w-3.5 h-3.5 text-muted-foreground" />
@@ -187,21 +225,30 @@ const CSChat = () => {
             <div className="flex-1 overflow-y-auto">
               {filteredChats.map((chat: any) => {
                 const resident = residents.find((r: any) => r.unit_id === chat.unit_id);
+                const unread = unreadCounts[chat.id] || 0;
+                const hasUnread = unread > 0;
                 return (
                   <div key={chat.id}
-                    onClick={() => setSelectedChatId(chat.id)}
+                    onClick={() => handleSelectChat(chat.id)}
                     className={`px-4 py-3 border-b border-border cursor-pointer transition-colors ${selectedChatId === chat.id ? "bg-accent" : "hover:bg-accent/50"}`}>
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">{resident?.name || "—"}</span>
+                        <span className={`text-sm ${hasUnread ? "font-semibold text-foreground" : "font-medium"}`}>{resident?.name || "—"}</span>
                         <span className="text-xs text-muted-foreground">{chat.units?.dong}동 {chat.units?.ho}</span>
                       </div>
-                      <span className="text-xs text-muted-foreground">
-                        {chat.last_message_at ? new Date(chat.last_message_at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }) : ""}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {chat.last_message_at ? new Date(chat.last_message_at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }) : ""}
+                        </span>
+                        {hasUnread && (
+                          <span className="bg-destructive text-destructive-foreground text-[10px] font-bold min-w-[18px] h-[18px] flex items-center justify-center rounded-full px-1">
+                            {unread}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center justify-between">
-                      <p className="text-sm text-muted-foreground truncate mr-2">{chat.last_message || ""}</p>
+                      <p className={`text-sm truncate mr-2 ${hasUnread ? "text-foreground font-medium" : "text-muted-foreground"}`}>{chat.last_message || ""}</p>
                       <span className={`status-badge ${getStatusColor(chat.status)} shrink-0`}>{chat.status}</span>
                     </div>
                   </div>
@@ -240,18 +287,28 @@ const CSChat = () => {
               </div>
 
               <div className="flex-1 p-4 overflow-y-auto space-y-3">
-                {messages.map((msg: any) => (
-                  <div key={msg.id} className={`flex ${msg.sender === "admin" ? "justify-end" : "justify-start"}`}>
-                    <div className={`max-w-[70%] px-3 py-2 rounded-lg text-sm ${
-                      msg.sender === "admin" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
-                    }`}>
-                      <p>{msg.message}</p>
-                      <div className={`text-xs mt-1 ${msg.sender === "admin" ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
-                        {new Date(msg.sent_at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
+                {messages.map((msg: any) => {
+                  const isAdmin = msg.sender === "admin";
+                  // Simulate: resident messages older than 5 min are "read"
+                  const isRead = isAdmin ? readMessageIds.has(msg.id) || true : true;
+                  return (
+                    <div key={msg.id} className={`flex ${isAdmin ? "justify-end" : "justify-start"}`}>
+                      <div className={`max-w-[70%] px-3 py-2 rounded-lg text-sm ${isAdmin ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"}`}>
+                        <p>{msg.message}</p>
+                        <div className={`flex items-center gap-1.5 mt-1 ${isAdmin ? "justify-end" : ""}`}>
+                          <span className={`text-xs ${isAdmin ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                            {new Date(msg.sent_at).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                          {isAdmin && (
+                            <span className={`text-[10px] ${isRead ? "text-primary-foreground/60" : "text-primary-foreground/40"}`}>
+                              {isRead ? "읽음" : "안읽음"}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <div ref={messagesEndRef} />
               </div>
 
@@ -272,7 +329,6 @@ const CSChat = () => {
         </div>
       </div>
 
-      {/* Complete Confirm */}
       <AlertDialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>

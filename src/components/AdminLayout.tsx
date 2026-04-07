@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Building2, Users, ClipboardCheck, Truck, CreditCard, Bell, Wrench, MessageSquare, Settings, LayoutDashboard, ChevronDown, Menu, X, LogOut, UserCog, Store } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface NavChild {
   label: string;
@@ -50,6 +52,20 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileExpandedItem, setMobileExpandedItem] = useState<string | null>(null);
+
+  // CS unread count (chats with status 미처리)
+  const { data: csUnreadCount = 0 } = useQuery({
+    queryKey: ["cs_unread_count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("cs_chats")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "미처리");
+      if (error) return 0;
+      return count || 0;
+    },
+    refetchInterval: 30000,
+  });
 
   const roleLabel = roles.includes("super_admin") ? "총관리자" : roles.includes("developer") ? "시행사" : roles.includes("contractor") ? "시공사" : roles.includes("cs_center") ? "입주지원센터" : "관리자";
 
@@ -118,8 +134,11 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               }
               return (
                 <NavLink key={item.path} to={item.path}
-                  className={`px-3 py-2 text-sm whitespace-nowrap rounded-md transition-colors ${active ? "text-primary font-semibold border-b-2 border-primary" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}>
+                  className={`px-3 py-2 text-sm whitespace-nowrap rounded-md transition-colors flex items-center gap-1 ${active ? "text-primary font-semibold border-b-2 border-primary" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}>
                   {item.label}
+                  {item.label === "CS·민원" && csUnreadCount > 0 && (
+                    <span className="bg-destructive text-destructive-foreground text-[10px] font-bold min-w-[16px] h-4 flex items-center justify-center rounded-full px-1">{csUnreadCount}</span>
+                  )}
                 </NavLink>
               );
             })}
