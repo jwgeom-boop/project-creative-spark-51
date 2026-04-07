@@ -134,8 +134,11 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
               }
               return (
                 <NavLink key={item.path} to={item.path}
-                  className={`px-3 py-2 text-sm whitespace-nowrap rounded-md transition-colors ${active ? "text-primary font-semibold border-b-2 border-primary" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}>
+                  className={`px-3 py-2 text-sm whitespace-nowrap rounded-md transition-colors flex items-center gap-1 ${active ? "text-primary font-semibold border-b-2 border-primary" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}>
                   {item.label}
+                  {item.label === "CS·민원" && csUnreadCount > 0 && (
+                    <span className="bg-destructive text-destructive-foreground text-[10px] font-bold min-w-[16px] h-4 flex items-center justify-center rounded-full px-1">{csUnreadCount}</span>
+                  )}
                 </NavLink>
               );
             })}
