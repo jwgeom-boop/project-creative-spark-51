@@ -53,6 +53,20 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileExpandedItem, setMobileExpandedItem] = useState<string | null>(null);
 
+  // CS unread count (chats with status 미처리)
+  const { data: csUnreadCount = 0 } = useQuery({
+    queryKey: ["cs_unread_count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("cs_chats")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "미처리");
+      if (error) return 0;
+      return count || 0;
+    },
+    refetchInterval: 30000,
+  });
+
   const roleLabel = roles.includes("super_admin") ? "총관리자" : roles.includes("developer") ? "시행사" : roles.includes("contractor") ? "시공사" : roles.includes("cs_center") ? "입주지원센터" : "관리자";
 
   // Filter nav items by role
