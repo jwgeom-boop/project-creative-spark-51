@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from "react";
-import { Download, Send, Upload, Bell, Loader2 } from "lucide-react";
+import { Download, Send, Upload, Bell, Loader2, CreditCard } from "lucide-react";
 import ExcelUploadDialog, { ExcelUploadConfig } from "@/components/ExcelUploadDialog";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -232,57 +232,85 @@ const Payments = () => {
         </div>
       </div>
 
-      {/* Table */}
       <div className="bg-card rounded-lg border border-border overflow-x-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" /></div>
+        ) : currentPageItems.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4">
+            <CreditCard className="w-12 h-12 text-muted-foreground/50 mb-4" />
+            <p className="text-sm font-medium text-muted-foreground mb-1">{filters.search ? "검색 결과가 없습니다" : "납부 내역이 없습니다"}</p>
+            <p className="text-xs text-muted-foreground/70">{filters.search ? `'${filters.search}'에 대한 결과를 찾을 수 없습니다` : "납부 항목을 등록해주세요"}</p>
+          </div>
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th className="w-10"><Checkbox checked={allUnpaidChecked && unpaidOnPage.length > 0} onCheckedChange={toggleAllPage} /></th>
-                <th>세대</th><th>입주자</th><th>잔금</th><th>중도금</th><th>옵션비</th><th>확장비</th><th>기타부담금</th><th>합계</th><th>납부상태</th><th>납부확인</th><th>알림발송일</th>
-              </tr>
-            </thead>
-            <tbody>
-              {currentPageItems.map((p, i) => (
-                <tr key={i} className={`${checkedIds.has(p.id) ? "bg-accent/30" : ""} ${p.paid ? "cursor-pointer hover:bg-muted/50" : ""}`}>
-                  <td>
-                    <Checkbox checked={checkedIds.has(p.id)} onCheckedChange={() => toggleCheck(p.id)} />
-                  </td>
-                  <td onClick={() => { if (p.paid) setSelectedPayment(p); }}>{p.unit}</td>
-                  <td className="font-medium" onClick={() => { if (p.paid) setSelectedPayment(p); }}>{p.name}</td>
-                  <td className="text-right">{p.balance}</td><td>{p.mid}</td>
-                  <td className="text-right">{p.option}</td><td className="text-right">{p.ext}</td>
-                  <td className="text-right">{p.etc}</td><td className="text-right font-medium">{p.total}</td>
-                  <td><span className={`status-badge ${getPaymentStatusBadge(p.status)}`}>{p.status}</span></td>
-                  <td>
-                    <div className="flex flex-col items-end gap-0.5">
-                      {p.paid ? (
-                        <>
-                          <span className="text-xs text-muted-foreground font-medium">완료</span>
-                          <span className="text-xs text-blue-500 underline cursor-pointer" onClick={() => setSelectedPayment(p)}>영수증 보기</span>
-                        </>
-                      ) : (
-                        <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => setApproveTarget(p)}>승인</Button>
-                      )}
+          <>
+            {/* Mobile card view */}
+            <div className="block md:hidden divide-y divide-border">
+              {currentPageItems.map((p) => (
+                <div key={p.id} className={`p-3 ${checkedIds.has(p.id) ? "bg-primary/5" : ""}`}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <Checkbox checked={checkedIds.has(p.id)} onCheckedChange={() => toggleCheck(p.id)} />
+                      <span className="font-medium text-sm">{p.unit}</span>
+                      <span className="text-xs text-muted-foreground">{p.name}</span>
                     </div>
-                  </td>
-                  <td>
-                    {p.paid ? (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    ) : p.notificationSentAt ? (
-                      <span className="text-xs text-muted-foreground">{new Date(p.notificationSentAt).toLocaleDateString("ko-KR")}</span>
-                    ) : (
-                      <Button size="sm" variant="ghost" className="text-xs h-7 gap-1" onClick={() => handleSingleNotify(p)}>
-                        <Bell className="w-3 h-3" /> 알림
-                      </Button>
-                    )}
-                  </td>
-                </tr>
+                    <span className={`status-badge ${getPaymentStatusBadge(p.status)}`}>{p.status}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>합계: {p.total}원</span>
+                    {!p.paid && <Button size="sm" variant="outline" className="text-xs h-6" onClick={() => setApproveTarget(p)}>승인</Button>}
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
+            </div>
+            {/* Desktop table */}
+            <table className="data-table hidden md:table">
+              <thead>
+                <tr>
+                  <th className="w-10"><Checkbox checked={allUnpaidChecked && unpaidOnPage.length > 0} onCheckedChange={toggleAllPage} /></th>
+                  <th>세대</th><th>입주자</th><th>잔금</th><th className="hidden lg:table-cell">중도금</th><th className="hidden lg:table-cell">옵션비</th><th className="hidden lg:table-cell">확장비</th><th className="hidden lg:table-cell">기타부담금</th><th>합계</th><th>납부상태</th><th>납부확인</th><th className="hidden lg:table-cell">알림발송일</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentPageItems.map((p, i) => (
+                  <tr key={i} className={`${checkedIds.has(p.id) ? "bg-accent/30" : ""} ${p.paid ? "cursor-pointer hover:bg-muted/50" : ""}`}>
+                    <td><Checkbox checked={checkedIds.has(p.id)} onCheckedChange={() => toggleCheck(p.id)} /></td>
+                    <td onClick={() => { if (p.paid) setSelectedPayment(p); }}>{p.unit}</td>
+                    <td className="font-medium" onClick={() => { if (p.paid) setSelectedPayment(p); }}>{p.name}</td>
+                    <td className="text-right">{p.balance}</td>
+                    <td className="text-right hidden lg:table-cell">{p.mid}</td>
+                    <td className="text-right hidden lg:table-cell">{p.option}</td>
+                    <td className="text-right hidden lg:table-cell">{p.ext}</td>
+                    <td className="text-right hidden lg:table-cell">{p.etc}</td>
+                    <td className="text-right font-medium">{p.total}</td>
+                    <td><span className={`status-badge ${getPaymentStatusBadge(p.status)}`}>{p.status}</span></td>
+                    <td>
+                      <div className="flex flex-col items-end gap-0.5">
+                        {p.paid ? (
+                          <>
+                            <span className="text-xs text-muted-foreground font-medium">완료</span>
+                            <span className="text-xs text-blue-500 underline cursor-pointer" onClick={() => setSelectedPayment(p)}>영수증 보기</span>
+                          </>
+                        ) : (
+                          <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => setApproveTarget(p)}>승인</Button>
+                        )}
+                      </div>
+                    </td>
+                    <td className="hidden lg:table-cell">
+                      {p.paid ? (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      ) : p.notificationSentAt ? (
+                        <span className="text-xs text-muted-foreground">{new Date(p.notificationSentAt).toLocaleDateString("ko-KR")}</span>
+                      ) : (
+                        <Button size="sm" variant="ghost" className="text-xs h-7 gap-1" onClick={() => handleSingleNotify(p)}>
+                          <Bell className="w-3 h-3" /> 알림
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
         )}
       </div>
       <TablePagination currentPage={page} totalItems={filtered.length} onPageChange={(p) => setPage(p)} />

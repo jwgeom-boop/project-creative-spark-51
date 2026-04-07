@@ -261,7 +261,7 @@ const Dashboard = () => {
               <div key={kpi.label} className={`kpi-card border-t-4 ${kpi.color}`}>
                 <div className="text-xs text-muted-foreground mb-2">{kpi.label}</div>
                 <div className="flex items-baseline justify-center gap-0.5">
-                  <span className="text-3xl font-bold text-foreground">{kpi.value}</span>
+                  <span className="text-2xl md:text-3xl font-bold text-foreground">{kpi.value}</span>
                   <span className="text-sm text-muted-foreground">{kpi.unit}</span>
                 </div>
                 {trend && (
@@ -278,10 +278,10 @@ const Dashboard = () => {
       {/* Charts Section */}
       {showCharts && (
         <>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div className="bg-card rounded-lg border border-border p-5">
               <h2 className="text-sm font-semibold text-foreground mb-4">현황 요약</h2>
-              <div className="flex justify-around items-start">
+              <div className="flex justify-around items-start overflow-x-auto gap-4">
                 {renderMiniPie(moveInPieData, moveInColors, "입주율", moveInPercent)}
                 {renderMiniPie(paymentPieData, paymentColors, "납부율", paymentPercent)}
                 {renderMiniPie(defectPieData, defectColors, "하자 처리율", defectPercent)}
@@ -316,15 +316,15 @@ const Dashboard = () => {
             {quickActions.map((action) => {
               const Icon = action.icon;
               return (
-                <button
-                  key={action.label}
-                  className="bg-card rounded-xl p-4 shadow-sm border border-border flex flex-col items-center gap-2 hover:shadow-md transition"
-                  onClick={action.action}
-                >
+                  <button
+                    key={action.label}
+                    className="bg-card rounded-xl p-2 md:p-4 shadow-sm border border-border flex flex-col items-center gap-1.5 md:gap-2 hover:shadow-md transition"
+                    onClick={action.action}
+                  >
                   <div className={`w-10 h-10 rounded-full ${action.bgColor} flex items-center justify-center`}>
                     <Icon className={`w-5 h-5 ${action.iconColor}`} />
                   </div>
-                  <span className="text-xs font-semibold text-foreground mt-1">{action.label}</span>
+                  <span className="text-xs font-semibold text-foreground mt-0.5 md:mt-1 text-center break-keep">{action.label}</span>
                 </button>
               );
             })}

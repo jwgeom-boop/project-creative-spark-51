@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Download, QrCode, CreditCard, Upload, X } from "lucide-react";
+import { Download, QrCode, CreditCard, Upload, X, Users } from "lucide-react";
 import ExcelUploadDialog, { ExcelUploadConfig } from "@/components/ExcelUploadDialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -236,37 +236,64 @@ const Residents = () => {
       <div className="bg-card rounded-lg border border-border overflow-x-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" /></div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 px-4">
+            <Users className="w-12 h-12 text-muted-foreground/50 mb-4" />
+            <p className="text-sm font-medium text-muted-foreground mb-1">{filters.search ? "검색 결과가 없습니다" : "등록된 입주자가 없습니다"}</p>
+            <p className="text-xs text-muted-foreground/70">{filters.search ? `'${filters.search}'에 대한 결과를 찾을 수 없습니다` : "엑셀 업로드로 일괄 등록하세요"}</p>
+          </div>
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th><input type="checkbox" checked={allPageChecked} onChange={toggleAll} /></th>
-                <th>세대</th><th>입주자명</th><th>연락처</th><th>차량번호</th>
-                <th>QR상태</th><th>입주증</th><th>잔금</th><th>사검예약</th><th>이사일</th>
-              </tr>
-            </thead>
-            <tbody>
+          <>
+            {/* Mobile card view */}
+            <div className="block md:hidden divide-y divide-border">
               {currentPageItems.map((r: any) => (
-                <tr
-                  key={r.id}
-                  className={cn("cursor-pointer hover:bg-accent/50", checkedIds.has(r.id) && "bg-blue-50")}
-                  onClick={() => { setSelectedUnit(r); setDialogOpen(true); }}
-                >
-                  <td onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={checkedIds.has(r.id)} onChange={() => toggleOne(r.id)} /></td>
-                  <td>{r.unit}</td>
-                  <td className="font-medium">{r.name}</td>
-                  <td>{r.phone}</td>
-                  <td>{r.car}</td>
-                  <td><span className={`status-badge ${getStatusBadge(r.qr)}`}>{r.qr}</span></td>
-                  <td><span className={`status-badge ${getStatusBadge(r.permit)}`}>{r.permit}</span></td>
-                  <td><span className={`status-badge ${getStatusBadge(r.payment)}`}>{r.payment}</span></td>
-                  <td><span className={`status-badge ${getStatusBadge(r.inspection)}`}>{r.inspection}</span></td>
-                  <td>{r.movingDate}</td>
-                </tr>
+                <div key={r.id} className={cn("p-3 cursor-pointer", checkedIds.has(r.id) && "bg-primary/5")} onClick={() => { setSelectedUnit(r); setDialogOpen(true); }}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" checked={checkedIds.has(r.id)} onChange={() => toggleOne(r.id)} onClick={e => e.stopPropagation()} />
+                      <span className="font-medium text-sm">{r.name}</span>
+                      <span className="text-xs text-muted-foreground">{r.unit}</span>
+                    </div>
+                    <span className={`status-badge ${getStatusBadge(r.inspection)}`}>{r.inspection}</span>
+                  </div>
+                  <div className="flex gap-3 text-xs text-muted-foreground">
+                    <span>잔금: <span className={`status-badge ${getStatusBadge(r.payment)}`}>{r.payment}</span></span>
+                    <span>입주증: <span className={`status-badge ${getStatusBadge(r.permit)}`}>{r.permit}</span></span>
+                  </div>
+                </div>
               ))}
-              {filtered.length === 0 && <tr><td colSpan={10} className="text-center py-6 text-muted-foreground">검색 결과가 없습니다.</td></tr>}
-            </tbody>
-          </table>
+            </div>
+            {/* Desktop table */}
+            <table className="data-table hidden md:table">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" checked={allPageChecked} onChange={toggleAll} /></th>
+                  <th>세대</th><th>입주자명</th><th className="hidden lg:table-cell">연락처</th><th className="hidden lg:table-cell">차량번호</th>
+                  <th>QR상태</th><th>입주증</th><th>잔금</th><th>사검예약</th><th className="hidden lg:table-cell">이사일</th>
+                </tr>
+              </thead>
+              <tbody>
+                {currentPageItems.map((r: any) => (
+                  <tr
+                    key={r.id}
+                    className={cn("cursor-pointer hover:bg-accent/50", checkedIds.has(r.id) && "bg-primary/5")}
+                    onClick={() => { setSelectedUnit(r); setDialogOpen(true); }}
+                  >
+                    <td onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={checkedIds.has(r.id)} onChange={() => toggleOne(r.id)} /></td>
+                    <td>{r.unit}</td>
+                    <td className="font-medium">{r.name}</td>
+                    <td className="hidden lg:table-cell">{r.phone}</td>
+                    <td className="hidden lg:table-cell">{r.car}</td>
+                    <td><span className={`status-badge ${getStatusBadge(r.qr)}`}>{r.qr}</span></td>
+                    <td><span className={`status-badge ${getStatusBadge(r.permit)}`}>{r.permit}</span></td>
+                    <td><span className={`status-badge ${getStatusBadge(r.payment)}`}>{r.payment}</span></td>
+                    <td><span className={`status-badge ${getStatusBadge(r.inspection)}`}>{r.inspection}</span></td>
+                    <td className="hidden lg:table-cell">{r.movingDate}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
         )}
       </div>
       <TablePagination currentPage={page} totalItems={filtered.length} onPageChange={(p) => setPage(p)} />
