@@ -33,6 +33,7 @@ const Inspection = () => {
   const [newSlotEnd, setNewSlotEnd] = useState("18:00");
   const [newSlotMax, setNewSlotMax] = useState(4);
   const [addedSlots, setAddedSlots] = useState<{ time: string; max: number }[]>([]);
+  const [qrModalOpen, setQrModalOpen] = useState(false);
 
   const { data: inspections = [], isLoading } = useQuery({
     queryKey: ["inspections"],
