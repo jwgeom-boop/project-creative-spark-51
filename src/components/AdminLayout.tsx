@@ -4,6 +4,7 @@ import { Building2, Users, ClipboardCheck, Truck, CreditCard, Bell, Wrench, Mess
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import OfflineBanner from "@/components/OfflineBanner";
 
 interface NavChild {
   label: string;
