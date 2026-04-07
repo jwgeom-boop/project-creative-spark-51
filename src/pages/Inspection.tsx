@@ -197,6 +197,7 @@ const Inspection = () => {
 
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <div className="ml-auto flex gap-2">
+          <button className="px-3 py-2 text-sm border border-primary rounded-md bg-primary text-primary-foreground flex items-center gap-1" onClick={() => setQrModalOpen(true)}><QrCode className="w-4 h-4" /> QR 체크인</button>
           <button className="px-3 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => setCloseModalOpen(true)}><Settings className="w-4 h-4" /> 예약 마감 설정</button>
           <button className="px-3 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => setSlotModalOpen(true)}><Plus className="w-4 h-4" /> 슬롯 추가</button>
           <button className="px-3 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => {
