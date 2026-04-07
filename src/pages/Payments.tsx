@@ -1,17 +1,22 @@
 import { useState, useMemo } from "react";
-import { Download, Send, Upload, CheckCircle2 } from "lucide-react";
+import { Download, Send, Upload, CheckCircle2, Loader2 } from "lucide-react";
 import ExcelUploadDialog, { ExcelUploadConfig } from "@/components/ExcelUploadDialog";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { exportToExcel } from "@/lib/exportExcel";
 import AdvancedFilterBar, { FilterValues, applyCommonFilters } from "@/components/AdvancedFilterBar";
 import TablePagination, { paginate } from "@/components/TablePagination";
 import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import PaymentReceiptModal from "@/components/payments/PaymentReceiptModal";
+import PaymentKpiCards from "@/components/payments/PaymentKpiCards";
 
 interface PaymentItem {
+  id: string;
   dong: string;
   unit: string;
   name: string;
@@ -27,24 +32,6 @@ interface PaymentItem {
   paid: boolean;
 }
 
-const paymentDateMap: Record<string, string> = {
-  "분양 잔금": "2026.02.14",
-  "중도금 1차": "2025.06.30",
-  "중도금 2차": "2025.12.31",
-  "발코니 확장비": "2024.11.20",
-  "옵션비 (시스템에어컨)": "2024.11.20",
-  "관리비 예치금": "2026.01.10",
-};
-
-const receiptNumberMap: Record<string, string> = {
-  "분양 잔금": "RCP-2026-0214",
-  "중도금 1차": "RCP-2025-0630",
-  "중도금 2차": "RCP-2025-1231",
-  "발코니 확장비": "RCP-2024-1120",
-  "옵션비 (시스템에어컨)": "RCP-2024-1121",
-  "관리비 예치금": "RCP-2026-0110",
-};
-
 const getPaymentStatusBadge = (status: string) => {
   if (status === "납부완료" || status === "승인완료") return "status-complete";
   if (status.includes("연체")) return "status-error";
@@ -55,12 +42,17 @@ const formatAmount = (n: number) => n > 0 ? n.toLocaleString() : "미선택";
 
 const Payments = () => {
   const [searchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   const [filters, setFilters] = useState<FilterValues>({
     search: "", dong: "전체", status: searchParams.get("filter") || "전체",
   });
   const [page, setPage] = useState(1);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<PaymentItem | null>(null);
+  const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
+  const [approveTarget, setApproveTarget] = useState<PaymentItem | null>(null);
+  const [bulkApproveOpen, setBulkApproveOpen] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
 
   const uploadConfig: ExcelUploadConfig = {
     title: "납부내역 엑셀 업로드",
@@ -100,6 +92,7 @@ const Payments = () => {
         .order("created_at");
       if (error) throw error;
       return data.map((p: any) => ({
+        id: p.id,
         dong: p.units?.dong || "",
         unit: `${p.units?.dong} ${p.units?.ho}`,
         name: p.units?.residents?.[0]?.name || "—",
@@ -119,22 +112,59 @@ const Payments = () => {
 
   const dongOptions = useMemo(() => [...new Set(payments.map((p) => p.dong))].filter(Boolean).sort(), [payments]);
 
-  const summary = [
-    { label: "전체 세대", value: `${payments.length}세대` },
-    { label: "납부완료", value: `${payments.filter((p) => p.status === "납부완료").length}세대`, color: "text-success" },
-    { label: "미납", value: `${payments.filter((p) => p.status === "미납").length}세대`, color: "text-warning" },
-    { label: "연체", value: `${payments.filter((p) => p.status.includes("연체")).length}세대`, color: "text-destructive" },
-  ];
-
   const filtered = applyCommonFilters(payments, filters, {
     searchFields: ["unit", "name"],
     statusField: "status",
     dongField: "dong",
   });
 
-  const receiptLabel = selectedPayment ? "분양 잔금" : "";
-  const receiptDate = paymentDateMap[receiptLabel] || "2026.02.14";
-  const receiptNumber = receiptNumberMap[receiptLabel] || "RCP-2026-0001";
+  const currentPageItems = paginate(filtered, page) as PaymentItem[];
+  const unpaidOnPage = currentPageItems.filter(p => !p.paid);
+  const allUnpaidChecked = unpaidOnPage.length > 0 && unpaidOnPage.every(p => checkedIds.has(p.id));
+
+  const toggleCheck = (id: string) => {
+    setCheckedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllPage = () => {
+    setCheckedIds(prev => {
+      const next = new Set(prev);
+      if (allUnpaidChecked) {
+        unpaidOnPage.forEach(p => next.delete(p.id));
+      } else {
+        unpaidOnPage.forEach(p => next.add(p.id));
+      }
+      return next;
+    });
+  };
+
+  const handleApprove = async (ids: string[]) => {
+    setIsApproving(true);
+    try {
+      for (const id of ids) {
+        const { error } = await supabase
+          .from("payments")
+          .update({ status: "납부완료", confirm_status: "승인완료", paid_at: new Date().toISOString() })
+          .eq("id", id);
+        if (error) throw error;
+      }
+      await queryClient.invalidateQueries({ queryKey: ["payments"] });
+      setCheckedIds(new Set());
+      toast.success(ids.length === 1 ? "납부 승인이 완료되었습니다." : `${ids.length}건 납부 승인이 완료되었습니다.`);
+    } catch (e: any) {
+      toast.error(`승인 실패: ${e.message}`);
+    } finally {
+      setIsApproving(false);
+      setApproveTarget(null);
+      setBulkApproveOpen(false);
+    }
+  };
+
+  const selectedCount = [...checkedIds].filter(id => payments.find(p => p.id === id && !p.paid)).length;
 
   return (
     <div>
@@ -143,14 +173,7 @@ const Payments = () => {
         <p className="page-description">세대별 납부 상태 조회 · 미납 알림 · 승인 처리</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        {summary.map(s => (
-          <div key={s.label} className="kpi-card">
-            <div className="text-xs text-muted-foreground mb-1">{s.label}</div>
-            <div className={`text-xl font-bold ${s.color || "text-foreground"}`}>{s.value}</div>
-          </div>
-        ))}
-      </div>
+      <PaymentKpiCards payments={payments} />
 
       <AdvancedFilterBar
         config={{
@@ -168,7 +191,15 @@ const Payments = () => {
         onChange={(v) => { setFilters(v); setPage(1); }}
       />
 
+      {/* Action bar */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
+        {selectedCount > 0 && (
+          <div className="flex items-center gap-2 bg-accent/50 rounded-lg px-3 py-1.5">
+            <span className="text-sm font-medium">{selectedCount}건 선택됨</span>
+            <Button size="sm" onClick={() => setBulkApproveOpen(true)}>일괄 승인</Button>
+            <Button size="sm" variant="ghost" onClick={() => setCheckedIds(new Set())}>선택 해제</Button>
+          </div>
+        )}
         <div className="ml-auto flex gap-2">
           <button className="px-4 py-2 text-sm bg-destructive text-destructive-foreground rounded-md flex items-center gap-1" onClick={() => toast.success("미납 알림이 일괄 발송되었습니다.")}><Send className="w-4 h-4" /> 미납 알림 일괄발송</button>
           <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => setUploadOpen(true)}><Upload className="w-4 h-4" /> 엑셀 업로드</button>
@@ -180,32 +211,45 @@ const Payments = () => {
             ], "납부현황");
             toast.success("엑셀 파일이 다운로드되었습니다.");
           }}><Download className="w-4 h-4" /> 엑셀 다운로드</button>
-          <button className="px-4 py-2 text-sm bg-primary text-primary-foreground rounded-md" onClick={() => toast.success("납부가 승인되었습니다.")}>납부 승인</button>
         </div>
       </div>
 
+      {/* Table */}
       <div className="bg-card rounded-lg border border-border overflow-x-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-12"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" /></div>
         ) : (
           <table className="data-table">
-            <thead><tr><th>세대</th><th>입주자</th><th>잔금</th><th>중도금</th><th>옵션비</th><th>확장비</th><th>기타부담금</th><th>합계</th><th>납부상태</th><th>납부확인</th></tr></thead>
+            <thead>
+              <tr>
+                <th className="w-10"><Checkbox checked={allUnpaidChecked && unpaidOnPage.length > 0} onCheckedChange={toggleAllPage} /></th>
+                <th>세대</th><th>입주자</th><th>잔금</th><th>중도금</th><th>옵션비</th><th>확장비</th><th>기타부담금</th><th>합계</th><th>납부상태</th><th>납부확인</th>
+              </tr>
+            </thead>
             <tbody>
-              {paginate(filtered, page).map((p: any, i: number) => (
-                <tr
-                  key={i}
-                  className={p.paid ? "cursor-pointer hover:bg-muted/50" : ""}
-                  onClick={() => { if (p.paid) setSelectedPayment(p); }}
-                >
-                  <td>{p.unit}</td><td className="font-medium">{p.name}</td>
+              {currentPageItems.map((p, i) => (
+                <tr key={i} className={`${checkedIds.has(p.id) ? "bg-accent/30" : ""} ${p.paid ? "cursor-pointer hover:bg-muted/50" : ""}`}>
+                  <td>
+                    {!p.paid ? (
+                      <Checkbox checked={checkedIds.has(p.id)} onCheckedChange={() => toggleCheck(p.id)} />
+                    ) : null}
+                  </td>
+                  <td onClick={() => { if (p.paid) setSelectedPayment(p); }}>{p.unit}</td>
+                  <td className="font-medium" onClick={() => { if (p.paid) setSelectedPayment(p); }}>{p.name}</td>
                   <td className="text-right">{p.balance}</td><td>{p.mid}</td>
                   <td className="text-right">{p.option}</td><td className="text-right">{p.ext}</td>
                   <td className="text-right">{p.etc}</td><td className="text-right font-medium">{p.total}</td>
                   <td><span className={`status-badge ${getPaymentStatusBadge(p.status)}`}>{p.status}</span></td>
                   <td>
                     <div className="flex flex-col items-end gap-0.5">
-                      <span className={`status-badge ${getPaymentStatusBadge(p.confirm)}`}>{p.confirm}</span>
-                      {p.paid && <span className="text-xs text-blue-500 underline">영수증 보기</span>}
+                      {p.paid ? (
+                        <>
+                          <span className={`status-badge ${getPaymentStatusBadge(p.confirm)}`}>{p.confirm}</span>
+                          <span className="text-xs text-blue-500 underline cursor-pointer" onClick={() => setSelectedPayment(p)}>영수증 보기</span>
+                        </>
+                      ) : (
+                        <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => setApproveTarget(p)}>승인</Button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -217,62 +261,45 @@ const Payments = () => {
       <TablePagination currentPage={page} totalItems={filtered.length} onPageChange={(p) => setPage(p)} />
       <ExcelUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} config={uploadConfig} />
 
-      {/* Payment Receipt Modal */}
-      <Dialog open={!!selectedPayment} onOpenChange={(open) => { if (!open) setSelectedPayment(null); }}>
-        <DialogContent className="max-w-[340px] rounded-2xl p-5">
-          {selectedPayment && (
-            <>
-              {/* Header */}
-              <div className="bg-muted rounded-xl p-4 mb-4 text-center">
-                <div className="text-base font-black text-foreground">납부 확인서</div>
-                <div className="text-[10px] text-muted-foreground tracking-widest mt-0.5">PAYMENT RECEIPT</div>
-                <div className="border-t border-dashed border-border mt-3 mb-3" />
-                <div className="w-14 h-14 border-2 border-green-500 rounded-full mx-auto flex items-center justify-center">
-                  <CheckCircle2 className="w-7 h-7 text-green-500" />
-                </div>
-              </div>
+      {/* Receipt Modal */}
+      <PaymentReceiptModal payment={selectedPayment} onClose={() => setSelectedPayment(null)} />
 
-              {/* Info rows */}
-              <div className="space-y-2.5">
-                {[
-                  { label: "납부 항목", value: receiptLabel },
-                  { label: "납부 금액", value: `${selectedPayment.totalRaw.toLocaleString()}원` },
-                  { label: "납부 일자", value: receiptDate },
-                  { label: "수납 기관", value: "힐스테이트 입주지원센터" },
-                  { label: "납부자", value: `${selectedPayment.name} (${selectedPayment.unit})` },
-                  { label: "확인번호", value: receiptNumber },
-                ].map((row, idx) => (
-                  <div key={idx} className="flex justify-between">
-                    <span className="text-xs text-muted-foreground">{row.label}</span>
-                    <span className="text-sm font-semibold text-foreground">{row.value}</span>
-                  </div>
-                ))}
-              </div>
+      {/* Single Approve Dialog */}
+      <AlertDialog open={!!approveTarget} onOpenChange={(open) => { if (!open) setApproveTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>납부를 승인하시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {approveTarget && `${approveTarget.unit} | ${approveTarget.name} | 잔금 ${approveTarget.total}원`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isApproving}>취소</AlertDialogCancel>
+            <AlertDialogAction disabled={isApproving} onClick={() => approveTarget && handleApprove([approveTarget.id])}>
+              {isApproving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}승인
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
-              <div className="border-t border-dashed border-border my-3" />
-
-              <p className="text-[10px] text-muted-foreground text-center">
-                본 확인서는 전자 납부 기록을 기반으로 발급됩니다.
-              </p>
-
-              <DialogFooter className="flex gap-2 pt-2">
-                <Button variant="outline" className="flex-1" onClick={() => setSelectedPayment(null)}>
-                  닫기
-                </Button>
-                <Button
-                  className="flex-1 bg-gray-900 hover:bg-gray-800 text-white"
-                  onClick={() => {
-                    toast.success("영수증이 저장되었습니다");
-                    setSelectedPayment(null);
-                  }}
-                >
-                  저장하기
-                </Button>
-              </DialogFooter>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Bulk Approve Dialog */}
+      <AlertDialog open={bulkApproveOpen} onOpenChange={setBulkApproveOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>선택한 {selectedCount}건의 납부를 승인하시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription>승인 후 납부상태가 "납부완료"로 변경됩니다.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isApproving}>취소</AlertDialogCancel>
+            <AlertDialogAction disabled={isApproving} onClick={() => {
+              const ids = [...checkedIds].filter(id => payments.find(p => p.id === id && !p.paid));
+              handleApprove(ids);
+            }}>
+              {isApproving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}일괄 승인
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
