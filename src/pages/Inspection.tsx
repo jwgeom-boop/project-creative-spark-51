@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Download, Settings, Plus, AlertCircle, Loader2 } from "lucide-react";
+import { Download, Settings, Plus, AlertCircle, Loader2, QrCode } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
