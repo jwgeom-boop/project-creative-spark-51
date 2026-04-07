@@ -585,7 +585,10 @@ export type Database = {
       sites: {
         Row: {
           address: string | null
+          constructor_name: string | null
           created_at: string
+          developer_name: string | null
+          dong_count: number | null
           id: string
           move_in_end: string | null
           move_in_start: string | null
@@ -596,7 +599,10 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          constructor_name?: string | null
           created_at?: string
+          developer_name?: string | null
+          dong_count?: number | null
           id?: string
           move_in_end?: string | null
           move_in_start?: string | null
@@ -607,7 +613,10 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          constructor_name?: string | null
           created_at?: string
+          developer_name?: string | null
+          dong_count?: number | null
           id?: string
           move_in_end?: string | null
           move_in_start?: string | null
