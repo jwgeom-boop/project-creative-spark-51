@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Search, Pin, Eye, Pencil, Trash2, AlertTriangle } from "lucide-react";
+import { useState, useMemo, useRef, useEffect } from "react";
+import { Search, Pin, Eye, Pencil, Trash2, AlertTriangle, X } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -92,6 +92,13 @@ const Announcements = () => {
   // Reset page on filter change
   const handleCategoryChange = (v: string) => { setCategoryFilter(v); setPage(1); setSelectedIds(new Set()); };
   const handleSearchChange = (v: string) => { setSearch(v); setPage(1); };
+  const handlePageChange = (p: number) => { setPage(p); setSelectedIds(new Set()); };
+  const handleResetFilters = () => { setSearch(""); setCategoryFilter("전체"); setPage(1); setSelectedIds(new Set()); };
+
+  // Pinned count in selection
+  const selectedPinnedCount = useMemo(() => {
+    return announcements.filter(a => selectedIds.has(a.id) && a.is_pinned).length;
+  }, [announcements, selectedIds]);
 
   // Mutations
   const deleteMutation = useMutation({
@@ -181,6 +188,19 @@ const Announcements = () => {
 
   // Selection helpers
   const allPageSelected = paged.length > 0 && paged.every(a => selectedIds.has(a.id));
+  const somePageSelected = paged.some(a => selectedIds.has(a.id)) && !allPageSelected;
+  const headerCheckboxRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const el = headerCheckboxRef.current;
+    if (el) {
+      const input = el.querySelector("input") || el;
+      if (input instanceof HTMLElement) {
+        (input as any).indeterminate = somePageSelected;
+      }
+    }
+  }, [somePageSelected]);
+
   const toggleAll = () => {
     if (allPageSelected) {
       const next = new Set(selectedIds);
@@ -207,17 +227,38 @@ const Announcements = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          {/* Filters */}
+          {/* Category tabs */}
+          <div className="flex items-center border-b border-border mb-4">
+            {(["전체", "일반", "긴급", "일정"] as const).map(c => {
+              const active = categoryFilter === c;
+              const isUrgent = c === "긴급";
+              return (
+                <button
+                  key={c}
+                  onClick={() => handleCategoryChange(c)}
+                  className={`relative px-4 py-2.5 text-sm transition-colors ${active ? (isUrgent ? "text-destructive font-semibold" : "text-primary font-semibold") : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  {c}
+                  <span className={`ml-1.5 text-xs px-1.5 py-0.5 rounded-full ${isUrgent ? (active ? "bg-destructive text-destructive-foreground" : "bg-destructive/10 text-destructive") : (active ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground")}`}>
+                    {categoryCounts[c] ?? 0}
+                  </span>
+                  {active && <span className={`absolute bottom-0 left-0 right-0 h-0.5 ${isUrgent ? "bg-destructive" : "bg-primary"}`} />}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Search + result count */}
           <div className="flex items-center gap-3 mb-4 flex-wrap">
             <div className="flex items-center border border-border rounded-md bg-card">
               <input type="text" placeholder="공지 제목 검색" value={search} onChange={e => handleSearchChange(e.target.value)} className="px-3 py-2 text-sm bg-transparent outline-none w-48" />
               <span className="px-3 py-2 text-muted-foreground"><Search className="w-4 h-4" /></span>
             </div>
-            <select value={categoryFilter} onChange={e => handleCategoryChange(e.target.value)} className="px-3 py-2 border border-border rounded-md text-sm bg-card">
-              {["전체", "일반", "긴급", "일정"].map(c => (
-                <option key={c} value={c}>{c}({categoryCounts[c] ?? 0})</option>
-              ))}
-            </select>
+            {(search || categoryFilter !== "전체") && (
+              <button onClick={handleResetFilters} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+                <X className="w-3.5 h-3.5" /> 필터 초기화
+              </button>
+            )}
             <span className="text-sm text-muted-foreground ml-auto">총 {filtered.length}건</span>
           </div>
 
@@ -237,7 +278,7 @@ const Announcements = () => {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th className="w-10"><Checkbox checked={allPageSelected} onCheckedChange={toggleAll} /></th>
+                    <th className="w-10"><Checkbox ref={headerCheckboxRef} checked={allPageSelected} onCheckedChange={toggleAll} /></th>
                     <th>제목</th>
                     <th>카테고리</th>
                     <th>등록일</th>
@@ -277,13 +318,15 @@ const Announcements = () => {
 
           {/* Pagination */}
           <div className="flex items-center justify-between mt-3 flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">페이지당</span>
-              <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }} className="px-2 py-1 border border-border rounded text-sm bg-card">
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">
+                {Math.min((page - 1) * pageSize + 1, filtered.length)}-{Math.min(page * pageSize, filtered.length)} / 전체 {filtered.length}건
+              </span>
+              <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setPage(1); setSelectedIds(new Set()); }} className="px-2 py-1 border border-border rounded text-sm bg-card">
                 <option value={10}>10건</option><option value={20}>20건</option><option value={50}>50건</option>
               </select>
             </div>
-            <TablePagination currentPage={page} totalItems={filtered.length} pageSize={pageSize} onPageChange={setPage} />
+            <TablePagination currentPage={page} totalItems={filtered.length} pageSize={pageSize} onPageChange={handlePageChange} />
           </div>
 
           <div className="mt-3 p-3 bg-accent rounded-lg text-sm text-muted-foreground">
@@ -336,8 +379,15 @@ const Announcements = () => {
       <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>선택한 {selectedIds.size}개의 공지를 삭제하시겠습니까?</AlertDialogTitle>
-            <AlertDialogDescription>삭제된 공지는 복구할 수 없습니다.</AlertDialogDescription>
+            <AlertDialogTitle>공지를 삭제하시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription>
+              선택한 {selectedIds.size}개의 공지를 삭제하면 복구할 수 없습니다.
+              {selectedPinnedCount > 0 && (
+                <span className="block mt-2 text-warning font-medium">
+                  ⚠️ {selectedIds.size}개 중 {selectedPinnedCount}개는 상단 고정 공지입니다. 함께 삭제하시겠습니까?
+                </span>
+              )}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>취소</AlertDialogCancel>
