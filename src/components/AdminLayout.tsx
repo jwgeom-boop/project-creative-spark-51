@@ -46,7 +46,7 @@ const navItems: NavItem[] = [
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
-  const { profile, signOut, roles } = useAuth();
+  const { profile, signOut, roles, activeSiteName } = useAuth();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileExpandedItem, setMobileExpandedItem] = useState<string | null>(null);
@@ -85,7 +85,8 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <span className="text-primary-foreground text-xs font-bold">ON</span>
             </div>
-            <span className="font-bold text-foreground text-sm">입주ON 관리자</span>
+            <span className="font-bold text-foreground text-sm">입주ON</span>
+            {activeSiteName && <span className="text-xs text-muted-foreground ml-1 hidden md:inline">· {activeSiteName}</span>}
           </div>
 
           <nav className="hidden lg:flex items-center gap-1 flex-wrap">
