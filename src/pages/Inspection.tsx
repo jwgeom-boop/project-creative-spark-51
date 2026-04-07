@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Download, Settings, Plus, AlertCircle, Loader2 } from "lucide-react";
+import { Download, Settings, Plus, AlertCircle, Loader2, QrCode } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import QrCheckinModal from "@/components/inspection/QrCheckinModal";
 
 const DEFAULT_TIME_SLOTS = ["09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00"];
 
@@ -32,6 +33,7 @@ const Inspection = () => {
   const [newSlotEnd, setNewSlotEnd] = useState("18:00");
   const [newSlotMax, setNewSlotMax] = useState(4);
   const [addedSlots, setAddedSlots] = useState<{ time: string; max: number }[]>([]);
+  const [qrModalOpen, setQrModalOpen] = useState(false);
 
   const { data: inspections = [], isLoading } = useQuery({
     queryKey: ["inspections"],
@@ -195,6 +197,7 @@ const Inspection = () => {
 
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <div className="ml-auto flex gap-2">
+          <button className="px-3 py-2 text-sm border border-primary rounded-md bg-primary text-primary-foreground flex items-center gap-1" onClick={() => setQrModalOpen(true)}><QrCode className="w-4 h-4" /> QR 체크인</button>
           <button className="px-3 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => setCloseModalOpen(true)}><Settings className="w-4 h-4" /> 예약 마감 설정</button>
           <button className="px-3 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => setSlotModalOpen(true)}><Plus className="w-4 h-4" /> 슬롯 추가</button>
           <button className="px-3 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => {
@@ -340,6 +343,7 @@ const Inspection = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <QrCheckinModal open={qrModalOpen} onOpenChange={setQrModalOpen} />
     </div>
   );
 };
