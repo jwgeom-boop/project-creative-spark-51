@@ -96,6 +96,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <div className="min-h-screen bg-background">
+      <OfflineBanner />
       <header className="bg-card border-b border-border sticky top-0 z-50">
         <div className="flex items-center h-14 px-4">
           <div className="flex items-center gap-2 mr-8 shrink-0">
