@@ -343,6 +343,7 @@ const Inspection = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <QrCheckinModal open={qrModalOpen} onOpenChange={setQrModalOpen} />
     </div>
   );
 };
