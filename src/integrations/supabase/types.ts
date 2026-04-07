@@ -414,6 +414,7 @@ export type Database = {
           extension_amount: number | null
           id: string
           mid_payment_status: string | null
+          notification_sent_at: string | null
           option_amount: number | null
           paid_at: string | null
           status: string
@@ -429,6 +430,7 @@ export type Database = {
           extension_amount?: number | null
           id?: string
           mid_payment_status?: string | null
+          notification_sent_at?: string | null
           option_amount?: number | null
           paid_at?: string | null
           status?: string
@@ -444,6 +446,7 @@ export type Database = {
           extension_amount?: number | null
           id?: string
           mid_payment_status?: string | null
+          notification_sent_at?: string | null
           option_amount?: number | null
           paid_at?: string | null
           status?: string

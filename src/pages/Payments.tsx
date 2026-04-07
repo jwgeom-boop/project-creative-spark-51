@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Download, Send, Upload, CheckCircle2, Loader2 } from "lucide-react";
+import { useState, useMemo, useRef } from "react";
+import { Download, Send, Upload, Bell, Loader2 } from "lucide-react";
 import ExcelUploadDialog, { ExcelUploadConfig } from "@/components/ExcelUploadDialog";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -8,14 +8,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { exportToExcel } from "@/lib/exportExcel";
 import AdvancedFilterBar, { FilterValues, applyCommonFilters } from "@/components/AdvancedFilterBar";
 import TablePagination, { paginate } from "@/components/TablePagination";
-import { Dialog, DialogContent, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction, AlertDialogCancel } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import PaymentReceiptModal from "@/components/payments/PaymentReceiptModal";
 import PaymentKpiCards from "@/components/payments/PaymentKpiCards";
+import UnpaidNotifyModal from "@/components/payments/UnpaidNotifyModal";
 
-interface PaymentItem {
+export interface PaymentItem {
   id: string;
   dong: string;
   unit: string;
@@ -30,6 +30,7 @@ interface PaymentItem {
   status: string;
   confirm: string;
   paid: boolean;
+  notificationSentAt: string | null;
 }
 
 const getPaymentStatusBadge = (status: string) => {
@@ -53,6 +54,7 @@ const Payments = () => {
   const [approveTarget, setApproveTarget] = useState<PaymentItem | null>(null);
   const [bulkApproveOpen, setBulkApproveOpen] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
+  const [notifyModalOpen, setNotifyModalOpen] = useState(false);
 
   const uploadConfig: ExcelUploadConfig = {
     title: "납부내역 엑셀 업로드",
@@ -106,6 +108,7 @@ const Payments = () => {
         status: p.status,
         confirm: p.confirm_status,
         paid: p.status === "납부완료",
+        notificationSentAt: p.notification_sent_at,
       })) as PaymentItem[];
     },
   });
@@ -121,6 +124,8 @@ const Payments = () => {
   const currentPageItems = paginate(filtered, page) as PaymentItem[];
   const unpaidOnPage = currentPageItems.filter(p => !p.paid);
   const allUnpaidChecked = unpaidOnPage.length > 0 && unpaidOnPage.every(p => checkedIds.has(p.id));
+
+  const unpaidPayments = payments.filter(p => !p.paid);
 
   const toggleCheck = (id: string) => {
     setCheckedIds(prev => {
@@ -164,7 +169,16 @@ const Payments = () => {
     }
   };
 
+  const handleSingleNotify = async (p: PaymentItem) => {
+    const { error } = await supabase.from("payments").update({ notification_sent_at: new Date().toISOString() }).eq("id", p.id);
+    if (!error) {
+      await queryClient.invalidateQueries({ queryKey: ["payments"] });
+      toast.success(`${p.unit} ${p.name}님에게 미납 알림이 발송되었습니다.`);
+    }
+  };
+
   const selectedCount = [...checkedIds].filter(id => payments.find(p => p.id === id && !p.paid)).length;
+  const paidCheckedIds = [...checkedIds].filter(id => payments.find(p => p.id === id && p.paid));
 
   return (
     <div>
@@ -193,15 +207,19 @@ const Payments = () => {
 
       {/* Action bar */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
-        {selectedCount > 0 && (
+        {(selectedCount > 0 || paidCheckedIds.length > 0) && (
           <div className="flex items-center gap-2 bg-accent/50 rounded-lg px-3 py-1.5">
-            <span className="text-sm font-medium">{selectedCount}건 선택됨</span>
-            <Button size="sm" onClick={() => setBulkApproveOpen(true)}>일괄 승인</Button>
+            <span className="text-sm font-medium">{checkedIds.size}건 선택됨</span>
+            {selectedCount > 0 && (
+              <Button size="sm" onClick={() => setBulkApproveOpen(true)}>일괄 승인</Button>
+            )}
             <Button size="sm" variant="ghost" onClick={() => setCheckedIds(new Set())}>선택 해제</Button>
           </div>
         )}
         <div className="ml-auto flex gap-2">
-          <button className="px-4 py-2 text-sm bg-destructive text-destructive-foreground rounded-md flex items-center gap-1" onClick={() => toast.success("미납 알림이 일괄 발송되었습니다.")}><Send className="w-4 h-4" /> 미납 알림 일괄발송</button>
+          <button className="px-4 py-2 text-sm bg-destructive text-destructive-foreground rounded-md flex items-center gap-1" onClick={() => setNotifyModalOpen(true)}>
+            <Send className="w-4 h-4" /> 미납 알림 일괄발송
+          </button>
           <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => setUploadOpen(true)}><Upload className="w-4 h-4" /> 엑셀 업로드</button>
           <button className="px-4 py-2 text-sm border border-border rounded-md bg-card flex items-center gap-1" onClick={() => {
             exportToExcel(filtered as any, [
@@ -223,16 +241,14 @@ const Payments = () => {
             <thead>
               <tr>
                 <th className="w-10"><Checkbox checked={allUnpaidChecked && unpaidOnPage.length > 0} onCheckedChange={toggleAllPage} /></th>
-                <th>세대</th><th>입주자</th><th>잔금</th><th>중도금</th><th>옵션비</th><th>확장비</th><th>기타부담금</th><th>합계</th><th>납부상태</th><th>납부확인</th>
+                <th>세대</th><th>입주자</th><th>잔금</th><th>중도금</th><th>옵션비</th><th>확장비</th><th>기타부담금</th><th>합계</th><th>납부상태</th><th>납부확인</th><th>알림발송일</th>
               </tr>
             </thead>
             <tbody>
               {currentPageItems.map((p, i) => (
                 <tr key={i} className={`${checkedIds.has(p.id) ? "bg-accent/30" : ""} ${p.paid ? "cursor-pointer hover:bg-muted/50" : ""}`}>
                   <td>
-                    {!p.paid ? (
-                      <Checkbox checked={checkedIds.has(p.id)} onCheckedChange={() => toggleCheck(p.id)} />
-                    ) : null}
+                    <Checkbox checked={checkedIds.has(p.id)} onCheckedChange={() => toggleCheck(p.id)} />
                   </td>
                   <td onClick={() => { if (p.paid) setSelectedPayment(p); }}>{p.unit}</td>
                   <td className="font-medium" onClick={() => { if (p.paid) setSelectedPayment(p); }}>{p.name}</td>
@@ -244,13 +260,24 @@ const Payments = () => {
                     <div className="flex flex-col items-end gap-0.5">
                       {p.paid ? (
                         <>
-                          <span className={`status-badge ${getPaymentStatusBadge(p.confirm)}`}>{p.confirm}</span>
+                          <span className="text-xs text-muted-foreground font-medium">완료</span>
                           <span className="text-xs text-blue-500 underline cursor-pointer" onClick={() => setSelectedPayment(p)}>영수증 보기</span>
                         </>
                       ) : (
                         <Button size="sm" variant="outline" className="text-xs h-7" onClick={() => setApproveTarget(p)}>승인</Button>
                       )}
                     </div>
+                  </td>
+                  <td>
+                    {p.paid ? (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    ) : p.notificationSentAt ? (
+                      <span className="text-xs text-muted-foreground">{new Date(p.notificationSentAt).toLocaleDateString("ko-KR")}</span>
+                    ) : (
+                      <Button size="sm" variant="ghost" className="text-xs h-7 gap-1" onClick={() => handleSingleNotify(p)}>
+                        <Bell className="w-3 h-3" /> 알림
+                      </Button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -263,6 +290,14 @@ const Payments = () => {
 
       {/* Receipt Modal */}
       <PaymentReceiptModal payment={selectedPayment} onClose={() => setSelectedPayment(null)} />
+
+      {/* Unpaid Notify Modal */}
+      <UnpaidNotifyModal
+        open={notifyModalOpen}
+        onOpenChange={setNotifyModalOpen}
+        unpaidPayments={unpaidPayments}
+        onSent={() => queryClient.invalidateQueries({ queryKey: ["payments"] })}
+      />
 
       {/* Single Approve Dialog */}
       <AlertDialog open={!!approveTarget} onOpenChange={(open) => { if (!open) setApproveTarget(null); }}>

@@ -1,0 +1,1 @@
+ALTER TABLE public.payments ADD COLUMN notification_sent_at timestamptz DEFAULT NULL;
