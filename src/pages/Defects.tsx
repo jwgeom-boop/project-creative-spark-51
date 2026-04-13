@@ -109,6 +109,8 @@ const Defects = () => {
     },
   });
 
+  const defects = fetchedDefects.length > 0 ? fetchedDefects : SAMPLE_DEFECTS;
+
   const dongOptions = useMemo(() => [...new Set(defects.map((d) => d.dong))].filter(Boolean).sort(), [defects]);
 
   const summary = [
