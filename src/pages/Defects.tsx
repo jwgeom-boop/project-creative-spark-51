@@ -69,7 +69,16 @@ const Defects = () => {
   const [memo, setMemo] = useState("");
   const [checkedIds, setCheckedIds] = useState<Set<string>>(new Set());
 
-  const { data: defects = [], isLoading } = useQuery({
+  const SAMPLE_DEFECTS: DefectItem[] = [
+    { id: "1", no: "001", dong: "101", ho: "501호", unit: "101동 501호", type: "배관·누수", content: "욕실 천장에서 물이 새고 있습니다", photos: "—", date: "2026-04-10", dateDisplay: "04.10", dateFormatted: "2026.04.10", company: "미배정", visitDate: "—", visitDateRaw: null, visitDateFormatted: "—", status: "미배정", residentName: "—", residentPhone: "—" },
+    { id: "2", no: "002", dong: "102", ho: "302호", unit: "102동 302호", type: "마감재·도배", content: "거실 벽지가 들뜨고 곰팡이가 발생했습니다", photos: "—", date: "2026-04-08", dateDisplay: "04.08", dateFormatted: "2026.04.08", company: "청우인테리어", visitDate: "04.15", visitDateRaw: "2026-04-15", visitDateFormatted: "2026.04.15", status: "처리중", residentName: "—", residentPhone: "—" },
+    { id: "3", no: "003", dong: "103", ho: "1202호", unit: "103동 1202호", type: "전기·설비", content: "안방 콘센트에서 불꽃이 튑니다", photos: "—", date: "2026-04-07", dateDisplay: "04.07", dateFormatted: "2026.04.07", company: "대성전기", visitDate: "04.14", visitDateRaw: "2026-04-14", visitDateFormatted: "2026.04.14", status: "처리중", residentName: "—", residentPhone: "—" },
+    { id: "4", no: "004", dong: "104", ho: "801호", unit: "104동 801호", type: "창호·유리", content: "베란다 창문이 닫히지 않습니다", photos: "—", date: "2026-04-05", dateDisplay: "04.05", dateFormatted: "2026.04.05", company: "미래창호", visitDate: "04.11", visitDateRaw: "2026-04-11", visitDateFormatted: "2026.04.11", status: "완료", residentName: "—", residentPhone: "—" },
+    { id: "5", no: "005", dong: "101", ho: "703호", unit: "101동 703호", type: "배관·누수", content: "주방 싱크대 아래 배관에서 물이 샙니다", photos: "—", date: "2026-04-11", dateDisplay: "04.11", dateFormatted: "2026.04.11", company: "미배정", visitDate: "—", visitDateRaw: null, visitDateFormatted: "—", status: "미배정", residentName: "—", residentPhone: "—" },
+    { id: "6", no: "006", dong: "105", ho: "401호", unit: "105동 401호", type: "마감재·도배", content: "침실 바닥재가 들뜨며 소리가 납니다", photos: "—", date: "2026-04-03", dateDisplay: "04.03", dateFormatted: "2026.04.03", company: "청우인테리어", visitDate: "04.09", visitDateRaw: "2026-04-09", visitDateFormatted: "2026.04.09", status: "완료", residentName: "—", residentPhone: "—" },
+  ];
+
+  const { data: fetchedDefects = [], isLoading } = useQuery({
     queryKey: ["defects"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -99,6 +108,8 @@ const Defects = () => {
       })) as DefectItem[];
     },
   });
+
+  const defects = fetchedDefects.length > 0 ? fetchedDefects : SAMPLE_DEFECTS;
 
   const dongOptions = useMemo(() => [...new Set(defects.map((d) => d.dong))].filter(Boolean).sort(), [defects]);
 
