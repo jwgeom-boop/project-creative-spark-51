@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Download, Wrench } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -55,9 +56,12 @@ const getStatusColor = (status: string) => {
 const Defects = () => {
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const { roles } = useAuth();
+  const isCsRole = roles.includes("cs_center");
   const [filters, setFilters] = useState<FilterValues>({
     search: "", dong: "전체", status: searchParams.get("filter") || "전체",
   });
+  const [selectedCompany, setSelectedCompany] = useState("전체");
   const [page, setPage] = useState(1);
   const [selectedDefect, setSelectedDefect] = useState<DefectItem | null>(null);
   const [assignee, setAssignee] = useState("");
@@ -105,12 +109,18 @@ const Defects = () => {
     { label: "완료", value: `${defects.filter((d) => d.status === "완료").length}건`, color: "text-success" },
   ];
 
+  const companyOptions = useMemo(() => [
+    "전체",
+    ...Array.from(new Set(defects.map(d => d.company))).filter(c => c && c !== "미배정").sort(),
+    "미배정",
+  ], [defects]);
+
   const filtered = applyCommonFilters(defects, filters, {
     searchFields: ["unit", "content", "type"],
     statusField: "status",
     dongField: "dong",
     dateField: "date",
-  });
+  }).filter((d: any) => selectedCompany === "전체" || d.company === selectedCompany);
 
   const currentPageItems = paginate(filtered, page);
 
