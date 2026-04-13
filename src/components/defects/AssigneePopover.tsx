@@ -3,10 +3,10 @@ import { Wrench, Paintbrush, Zap, DoorOpen } from "lucide-react";
 import { useState } from "react";
 
 export const ASSIGNEES = [
-  { name: "김기사", specialty: "배관·누수", icon: Wrench },
-  { name: "이기사", specialty: "마감재·도배", icon: Paintbrush },
-  { name: "박기사", specialty: "전기·설비", icon: Zap },
-  { name: "최기사", specialty: "창호·유리", icon: DoorOpen },
+  { name: "OO배관", specialty: "배관·누수", icon: Wrench },
+  { name: "OO인테리어", specialty: "마감재·도배", icon: Paintbrush },
+  { name: "OO전기", specialty: "전기·설비", icon: Zap },
+  { name: "OO창호", specialty: "창호·유리", icon: DoorOpen },
 ];
 
 interface AssigneePopoverProps {
