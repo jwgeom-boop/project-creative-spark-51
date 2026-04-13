@@ -225,11 +225,24 @@ const Defects = () => {
         onChange={(v) => { setFilters(v); setPage(1); }}
       />
 
+      {/* Company filter */}
+      <div className="flex items-center gap-2 mb-4">
+        <select
+          value={selectedCompany}
+          onChange={(e) => { setSelectedCompany(e.target.value); setPage(1); }}
+          className="h-9 rounded-md border border-input bg-card px-3 text-sm"
+        >
+          {companyOptions.map(opt => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+      </div>
+
       {/* Bulk action bar */}
       {checkedIds.size > 0 && (
         <div className="flex items-center gap-3 mb-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
           <span className="text-sm font-medium">{checkedIds.size}건 선택됨</span>
-          {selectedUnassigned.length > 0 && (
+          {selectedUnassigned.length > 0 && !isCsRole && (
             <AssigneePopover onSelect={handleBulkAssign}>
               <button className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md">
                 일괄 배정 ▾ ({selectedUnassigned.length}건)
@@ -312,10 +325,12 @@ const Defects = () => {
                     <td className="hidden lg:table-cell">{d.visitDate}</td>
                     <td><span className={`status-badge ${getDefectStatusBadge(d.status)}`}>{d.status}</span></td>
                     <td onClick={(e) => e.stopPropagation()}>
-                      {d.status === "미배정" ? (
+                      {d.status === "미배정" && !isCsRole ? (
                         <AssigneePopover onSelect={(name) => handleInlineAssign(d.id, name)}>
                           <button className="text-primary text-sm hover:underline">배정 ▾</button>
                         </AssigneePopover>
+                      ) : d.status === "미배정" && isCsRole ? (
+                        <span className="text-muted-foreground text-sm pointer-events-none opacity-50">배정 ▾</span>
                       ) : d.status === "완료" ? (
                         <span className="text-green-600 text-sm">완료✓</span>
                       ) : "—"}
@@ -450,7 +465,7 @@ const Defects = () => {
 
           <DialogFooter className="flex gap-2 pt-2">
             <Button variant="outline" className="flex-1" onClick={() => setSelectedDefect(null)}>닫기</Button>
-            {selectedDefect?.status === "미배정" && (
+            {selectedDefect?.status === "미배정" && !isCsRole && (
               <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleAction}>배정하기</Button>
             )}
             {selectedDefect?.status === "처리중" && (
